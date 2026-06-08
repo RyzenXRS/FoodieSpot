@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_page.dart';
-import '../home/user_page.dart';
-import '../home/owner_page.dart';
-import '../home/admin_page.dart';
+import '../dashboards/user_page.dart';
+import '../dashboards/owner_page.dart';
+import '../dashboards/admin_page.dart';
 
 class RoleChecker extends StatelessWidget {
   const RoleChecker({super.key});
