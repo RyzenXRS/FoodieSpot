@@ -4,8 +4,8 @@ import '../../services/tempat_makan_service.dart';
 import '../../models/tempat_makan_model.dart';
 import '../../models/user_model.dart';
 import '../splash/role_checker.dart';
-import '../profile_page.dart';
-import '../tempat_makan/detail_tempat_makan_page.dart'; // Import halaman detail baru
+import '../profile/profile_page.dart';
+import '../tempat_makan/detail_tempat_makan_page.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -25,7 +25,6 @@ class _UserHomePageState extends State<UserHomePage> {
 
   void _fetchData() {
     setState(() {
-      // Backend otomatis memberikan SEMUA tempat makan jika yang request adalah 'user'
       _tempatMakanFuture = TempatMakanService().getTempatMakan();
     });
   }
@@ -90,11 +89,9 @@ class _UserHomePageState extends State<UserHomePage> {
                 return Card(
                   elevation: 3,
                   margin: const EdgeInsets.only(bottom: 16),
-                  clipBehavior:
-                      Clip.antiAlias, // Biar ujung gambarnya melengkung
+                  clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     onTap: () {
-                      // Arahkan ke halaman Detail saat di-klik
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -106,7 +103,6 @@ class _UserHomePageState extends State<UserHomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Placeholder Gambar (Atas)
                         Container(
                           height: 140,
                           width: double.infinity,
@@ -117,7 +113,6 @@ class _UserHomePageState extends State<UserHomePage> {
                             color: Colors.white,
                           ),
                         ),
-                        // Informasi Teks (Bawah)
                         Padding(
                           padding: const EdgeInsets.all(12),
                           child: Column(

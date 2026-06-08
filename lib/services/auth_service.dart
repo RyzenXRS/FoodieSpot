@@ -26,10 +26,8 @@ class AuthService {
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 201 && responseData['status'] == 'success') {
-        // Jika sukses, simpan token dan data user ke lokal HP
         String token = responseData['token'];
         Map<String, dynamic> userMap = responseData['data'];
-
         await _saveSession(token, userMap);
       } else {
         throw Exception(responseData['message'] ?? 'Gagal mendaftar');
@@ -52,7 +50,6 @@ class AuthService {
       if (response.statusCode == 200 && responseData['status'] == 'success') {
         String token = responseData['token'];
         Map<String, dynamic> userMap = responseData['data'];
-
         await _saveSession(token, userMap);
       } else {
         throw Exception(responseData['message'] ?? 'Gagal login');
@@ -63,7 +60,6 @@ class AuthService {
   }
 
   // --- FUNGSI LOGOUT ---
-  // --- FUNGSI LOGOUT ---
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -72,33 +68,85 @@ class AuthService {
 
     if (token != null && token.isNotEmpty) {
       try {
-        // Tembak API logout ke Laravel dengan batas waktu (TIMEOUT)
         final response = await http
             .post(
               Uri.parse('${ApiConfig.baseUrl}/logout'),
               headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json', // WAJIB ada
+                'Accept': 'application/json',
                 'Authorization': 'Bearer $token',
               },
             )
-            .timeout(
-              const Duration(seconds: 5),
-            ); // Batasi tunggu maksimal 5 detik
+            .timeout(const Duration(seconds: 5));
 
         print("DEBUG LOGOUT: Response Laravel Status: ${response.statusCode}");
       } catch (e) {
-        // Kalau server mati atau timeout, abaikan saja dan lanjut hapus sesi lokal
         print("DEBUG LOGOUT: Error jaringan saat kontak server: $e");
       }
     }
 
-    // WAJIB: Hapus data sesi dari HP terlepas dari API sukses atau gagal
     await prefs.remove('token');
     await prefs.remove('user_data');
     await prefs.clear();
-
     print("DEBUG LOGOUT: Sesi lokal berhasil dibersihkan.");
+  }
+
+  // --- FUNGSI UPDATE PROFIL ---
+  Future<UserModel> updateProfile({
+    required String name,
+    required String phone,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+
+    try {
+      final response = await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+        body: {'name': name, 'phone': phone},
+      );
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['status'] == 'success') {
+        Map<String, dynamic> updatedUserMap = responseData['data'];
+        await prefs.setString('user_data', json.encode(updatedUserMap));
+        return UserModel.fromJson(updatedUserMap);
+      } else {
+        throw Exception(responseData['message'] ?? 'Gagal memperbarui profil');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  // --- FUNGSI HAPUS AKUN ---
+  Future<void> deleteAccount() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+
+    try {
+      final response = await http.delete(
+        Uri.parse('${ApiConfig.baseUrl}/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['status'] == 'success') {
+        await prefs.clear();
+      } else {
+        throw Exception(responseData['message'] ?? 'Gagal menghapus akun');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
   }
 
   // --- HELPER: SIMPAN SESI KE HP ---

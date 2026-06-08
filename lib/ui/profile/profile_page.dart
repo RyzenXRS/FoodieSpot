@@ -20,7 +20,6 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    // Inisialisasi form dengan data user yang sedang login
     _nameCtrl = TextEditingController(text: widget.user.name);
     _phoneCtrl = TextEditingController(text: widget.user.phone);
   }
@@ -49,7 +48,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // --- LOGIKA EDIT PROFIL (UPDATE) ---
   void _handleUpdate() async {
     if (_nameCtrl.text.isEmpty) {
       _showTopNotification("Nama tidak boleh kosong!", Colors.red);
@@ -67,11 +65,11 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       _showTopNotification(e.toString(), Colors.red);
     } finally {
+      // <--- INI YANG BENAR (huruf L nya dua)
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // --- LOGIKA HAPUS AKUN (DELETE) ---
   void _confirmDeleteAccount() {
     showDialog(
       context: context,
@@ -87,7 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(ctx); // Tutup dialog
+              Navigator.pop(ctx);
               setState(() => _isLoading = true);
               try {
                 await AuthService().deleteAccount();
@@ -96,7 +94,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     "Akun Anda berhasil dihapus.",
                     Colors.orange,
                   );
-                  // Tendang keluar ke RoleChecker untuk bersih-bersih navigasi
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (_) => const RoleChecker()),
@@ -211,7 +208,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: () {
-                        // Reset data ke awal jika batal
                         _nameCtrl.text = widget.user.name;
                         _phoneCtrl.text = widget.user.phone;
                         setState(() => _isEditing = false);
