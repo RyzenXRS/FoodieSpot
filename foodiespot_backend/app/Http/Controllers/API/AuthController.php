@@ -81,14 +81,23 @@ class AuthController extends Controller
     }
 
     // --- FUNGSI LOGOUT ---
+    // --- FUNGSI LOGOUT ---
     public function logout(Request $request)
     {
-        // Hapus token yang sedang digunakan saat ini
-        $request->user()->currentAccessToken()->delete();
+        // Pastikan user benar-benar terdeteksi oleh Sanctum sebelum menghapus token
+        if ($request->user()) {
+            $request->user()->currentAccessToken()->delete();
 
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Berhasil logout'
+            ], 200);
+        }
+
+        // Jika token tidak valid, tetap beri response JSON agar Flutter tidak bingung
         return response()->json([
-            'status' => 'success',
-            'message' => 'Berhasil logout'
-        ], 200);
+            'status' => 'error',
+            'message' => 'Sesi tidak valid'
+        ], 401);
     }
 }

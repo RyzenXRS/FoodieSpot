@@ -63,25 +63,42 @@ class AuthService {
   }
 
   // --- FUNGSI LOGOUT ---
+  // --- FUNGSI LOGOUT ---
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
 
-    try {
-      // Tembak API logout Laravel bawa Token-nya
-      await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/logout'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-    } catch (_) {
-      // Abaikan error jaringan saat logout, tetap bersihkan data lokal
+    print("DEBUG LOGOUT: Mencoba logout dengan token: $token");
+
+    if (token != null && token.isNotEmpty) {
+      try {
+        // Tembak API logout ke Laravel dengan batas waktu (TIMEOUT)
+        final response = await http
+            .post(
+              Uri.parse('${ApiConfig.baseUrl}/logout'),
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json', // WAJIB ada
+                'Authorization': 'Bearer $token',
+              },
+            )
+            .timeout(
+              const Duration(seconds: 5),
+            ); // Batasi tunggu maksimal 5 detik
+
+        print("DEBUG LOGOUT: Response Laravel Status: ${response.statusCode}");
+      } catch (e) {
+        // Kalau server mati atau timeout, abaikan saja dan lanjut hapus sesi lokal
+        print("DEBUG LOGOUT: Error jaringan saat kontak server: $e");
+      }
     }
 
-    // Hapus data sesi dari HP
+    // WAJIB: Hapus data sesi dari HP terlepas dari API sukses atau gagal
+    await prefs.remove('token');
+    await prefs.remove('user_data');
     await prefs.clear();
+
+    print("DEBUG LOGOUT: Sesi lokal berhasil dibersihkan.");
   }
 
   // --- HELPER: SIMPAN SESI KE HP ---

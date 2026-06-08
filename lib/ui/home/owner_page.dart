@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../splash/role_checker.dart';
 
 class OwnerHomePage extends StatelessWidget {
   const OwnerHomePage({super.key});
@@ -12,7 +13,17 @@ class OwnerHomePage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => AuthService().signOut(),
+            onPressed: () async {
+              await AuthService().signOut();
+
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RoleChecker()),
+                  (route) => false,
+                );
+              }
+            },
           ),
         ],
       ),
