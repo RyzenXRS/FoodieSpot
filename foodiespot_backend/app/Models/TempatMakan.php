@@ -22,6 +22,13 @@ class TempatMakan extends Model
         'rating',
     ];
 
+    // Tambahkan relasi ini untuk mengambil semua review dari tempat makan ini
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'user_id');

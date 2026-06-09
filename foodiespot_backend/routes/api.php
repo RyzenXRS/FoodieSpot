@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\TempatMakanController;
+use App\Http\Controllers\API\ReviewController; 
 
 // Route yang bebas diakses tanpa token (Publik)
 Route::post('/register', [AuthController::class, 'register']);
@@ -18,5 +19,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/profile', [AuthController::class, 'deleteAccount']);
     
     // API Route untuk Tempat Makan
+    // API Route untuk Tempat Makan
     Route::apiResource('tempat-makan', TempatMakanController::class);
+
+    // --- TAMBAHKAN ROUTE REVIEW INI ---
+    Route::get('/tempat-makan/{id}/reviews', [ReviewController::class, 'index']);
+    Route::post('/tempat-makan/{id}/reviews', [ReviewController::class, 'store']);
+    Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
 });
