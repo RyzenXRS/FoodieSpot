@@ -17,13 +17,10 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            
-            // --- KOLOM TAMBAHAN UNTUK FOODIESPOT ---
             $table->enum('role', ['user', 'owner', 'admin'])->default('user');
             $table->string('phone')->nullable();
             $table->string('photo_url')->nullable();
             $table->boolean('is_suspended')->default(false);
-            // ---------------------------------------
             
             $table->rememberToken();
             $table->timestamps();

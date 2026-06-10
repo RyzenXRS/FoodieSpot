@@ -1,25 +1,25 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/review_model.dart';
+import '../models/photo_model.dart';
 import '../utils/constants.dart';
-import 'dart:io';
 
-class ReviewService {
+class PhotoService {
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token');
   }
 
-  // --- 1. AMBIL DAFTAR REVIEW ---
-  Future<List<ReviewModel>> getReviews(int tempatMakanId) async {
+  // --- 1. AMBIL DAFTAR FOTO ---
+  Future<List<PhotoModel>> getPhotos(int tempatMakanId) async {
     String? token = await _getToken();
 
     try {
       final response = await http
           .get(
             Uri.parse(
-              '${ApiConfig.baseUrl}/tempat-makan/$tempatMakanId/reviews',
+              '${ApiConfig.baseUrl}/tempat-makan/$tempatMakanId/photos',
             ),
             headers: {
               'Accept': 'application/json',
@@ -30,53 +30,43 @@ class ReviewService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body)['data'] as List;
-        return data.map((item) => ReviewModel.fromJson(item)).toList();
+        return data.map((item) => PhotoModel.fromJson(item)).toList();
       } else {
-        throw Exception('Gagal memuat review');
+        throw Exception('Gagal memuat galeri foto');
       }
     } catch (e) {
       throw Exception('Kesalahan jaringan: $e');
     }
   }
 
-  // --- 2. TAMBAH REVIEW BARU ---
-  // --- FUNGSI BARU ADD REVIEW (BISA BAWA FOTO) ---
-  Future<void> addReview(
-    int tempatMakanId,
-    int rating,
-    String comment, {
-    File? imageFile,
-  }) async {
+  // --- 2. UPLOAD FOTO BARU (MULTIPART REQUEST) ---
+  Future<void> uploadPhoto(int tempatMakanId, File imageFile) async {
     String? token = await _getToken();
 
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('${ApiConfig.baseUrl}/tempat-makan/$tempatMakanId/reviews'),
+        Uri.parse('${ApiConfig.baseUrl}/tempat-makan/$tempatMakanId/photos'),
       );
 
+      // Tambahkan header token
       request.headers.addAll({
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       });
 
-      // Sisipkan teks
-      request.fields['rating'] = rating.toString();
-      if (comment.isNotEmpty) request.fields['comment'] = comment;
+      // Sisipkan file gambarnya ke dalam request
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path),
+      );
 
-      // Sisipkan gambar jika ada
-      if (imageFile != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('image', imageFile.path),
-        );
-      }
-
+      // Kirim ke server
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode != 201) {
         final responseData = json.decode(response.body);
-        throw Exception(responseData['message'] ?? 'Gagal mengirim review');
+        throw Exception(responseData['message'] ?? 'Gagal mengunggah foto');
       }
     } catch (e) {
       throw Exception(e.toString());

@@ -9,7 +9,6 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    // Tambahkan HasApiTokens di dalam block use ini
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
@@ -41,7 +40,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'is_suspended' => 'boolean', // Dikonversi ke true/false asli, bukan 1/0 agar Flutter tidak bingung
+            'is_suspended' => 'boolean',
         ];
     }
 }

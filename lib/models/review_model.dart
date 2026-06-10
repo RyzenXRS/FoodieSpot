@@ -4,7 +4,8 @@ class ReviewModel {
   final int tempatMakanId;
   final int rating;
   final String comment;
-  final String userName; // Nama user yang mereview (dari relasi)
+  final String userName;
+  final String? imagePath; // <-- Tambahan
 
   ReviewModel({
     required this.id,
@@ -13,6 +14,7 @@ class ReviewModel {
     required this.rating,
     required this.comment,
     required this.userName,
+    this.imagePath, // <-- Tambahan
   });
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
@@ -22,10 +24,8 @@ class ReviewModel {
       tempatMakanId: json['tempat_makan_id'] ?? 0,
       rating: json['rating'] ?? 0,
       comment: json['comment'] ?? '',
-      // Mengambil nama dari objek relasi 'user' jika ada
-      userName: json['user'] != null
-          ? json['user']['name']
-          : 'User Tidak Diketahui',
+      userName: json['user'] != null ? json['user']['name'] : 'User',
+      imagePath: json['image_path'], // <-- Tambahan
     );
   }
 }

@@ -1,11 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/tempat_makan_model.dart';
-import '../../models/riview_model.dart';
+import '../../models/review_model.dart';
+import '../../models/photo_model.dart';
 import '../../services/review_service.dart';
+import '../../services/photo_service.dart';
+import '../../utils/constants.dart';
 
 class DetailTempatMakanPage extends StatefulWidget {
   final TempatMakanModel tempatMakan;
-
   const DetailTempatMakanPage({super.key, required this.tempatMakan});
 
   @override
@@ -14,23 +18,26 @@ class DetailTempatMakanPage extends StatefulWidget {
 
 class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
   late Future<List<ReviewModel>> _reviewsFuture;
+  late Future<List<PhotoModel>> _photosFuture;
 
   @override
   void initState() {
     super.initState();
-    _fetchReviews();
+    _fetchData();
   }
 
-  void _fetchReviews() {
+  void _fetchData() {
     setState(() {
       _reviewsFuture = ReviewService().getReviews(widget.tempatMakan.id);
+      _photosFuture = PhotoService().getPhotos(widget.tempatMakan.id);
     });
   }
 
-  // --- POP-UP MODAL TAMBAH REVIEW ---
+  // --- MODAL REVIEW + UPLOAD FOTO ---
   void _showAddReviewModal() {
     int selectedRating = 5;
     final commentCtrl = TextEditingController();
+    File? selectedImage;
     bool isSubmitting = false;
 
     showModalBottomSheet(
@@ -54,13 +61,13 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    "Beri Penilaian",
+                    "Tulis Ulasan",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
 
-                  // Bintang Rating (Custom)
+                  // Bintang
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(5, (index) {
@@ -72,24 +79,74 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                           color: Colors.amber,
                           size: 40,
                         ),
-                        onPressed: () {
-                          setModalState(() => selectedRating = index + 1);
-                        },
+                        onPressed: () =>
+                            setModalState(() => selectedRating = index + 1),
                       );
                     }),
                   ),
                   const SizedBox(height: 16),
 
+                  // Form Komentar
                   TextField(
                     controller: commentCtrl,
                     maxLines: 3,
                     decoration: const InputDecoration(
-                      labelText: "Tulis ulasan Anda (Opsional)",
+                      labelText: "Bagaimana pengalaman Anda?",
                       border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // --- KOTAK PEMILIH FOTO ---
+                  GestureDetector(
+                    onTap: () async {
+                      final picker = ImagePicker();
+                      final pickedFile = await picker.pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 70,
+                      );
+                      if (pickedFile != null) {
+                        setModalState(
+                          () => selectedImage = File(pickedFile.path),
+                        );
+                      }
+                    },
+                    child: Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey[400]!),
+                      ),
+                      child: selectedImage != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.file(
+                                selectedImage!,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_a_photo,
+                                  color: Colors.grey,
+                                  size: 32,
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  "Tambahkan Foto (Opsional)",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
                   const SizedBox(height: 24),
 
+                  // Tombol Kirim
                   isSubmitting
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(
@@ -105,16 +162,17 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                 widget.tempatMakan.id,
                                 selectedRating,
                                 commentCtrl.text.trim(),
+                                imageFile: selectedImage, // Kirim foto jika ada
                               );
                               if (mounted) {
-                                Navigator.pop(ctx); // Tutup modal
+                                Navigator.pop(ctx);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text("Review berhasil dikirim!"),
+                                    content: Text("Ulasan berhasil dikirim!"),
                                     backgroundColor: Colors.green,
                                   ),
                                 );
-                                _fetchReviews(); // Refresh daftar review
+                                _fetchData(); // Refresh UI Review dan Galeri sekaligus!
                               }
                             } catch (e) {
                               if (mounted) {
@@ -131,13 +189,12 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                 );
                               }
                             } finally {
-                              if (mounted) {
+                              if (mounted)
                                 setModalState(() => isSubmitting = false);
-                              }
                             }
                           },
                           child: const Text(
-                            "Kirim Review",
+                            "Kirim Ulasan",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -154,6 +211,11 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
     );
   }
 
+  String _buildImageUrl(String imagePath) {
+    String rootUrl = ApiConfig.baseUrl.replaceAll('/api', '');
+    return '$rootUrl/storage/$imagePath';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,26 +224,31 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
-      // Gunakan floatingActionButton untuk tombol tambah review agar mudah diakses
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddReviewModal,
-        backgroundColor: Colors.orange,
-        icon: const Icon(Icons.rate_review, color: Colors.white),
-        label: const Text("Beri Ulasan", style: TextStyle(color: Colors.white)),
-      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Gambar Placeholder
-            Container(
-              height: 200,
-              color: Colors.orange[200],
-              child: const Icon(
-                Icons.restaurant,
-                size: 80,
-                color: Colors.white,
-              ),
+            FutureBuilder<List<PhotoModel>>(
+              future: _photosFuture,
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                  return Image.network(
+                    _buildImageUrl(snapshot.data!.first.imagePath),
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  );
+                }
+                return Container(
+                  height: 200,
+                  color: Colors.orange[200],
+                  child: const Icon(
+                    Icons.restaurant,
+                    size: 80,
+                    color: Colors.white,
+                  ),
+                );
+              },
             ),
 
             Padding(
@@ -243,44 +310,110 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     style: const TextStyle(fontSize: 16, height: 1.5),
                   ),
 
+                  const Divider(height: 32, thickness: 1),
+
+                  // --- SEKSI GALERI FOTO ---
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Galeri Foto",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      // Tombol Tambah Galeri sekarang langsung memanggil modal review
+                      TextButton.icon(
+                        onPressed: _showAddReviewModal,
+                        icon: const Icon(
+                          Icons.rate_review,
+                          color: Colors.orange,
+                        ),
+                        label: const Text(
+                          "Tulis Ulasan & Foto",
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  FutureBuilder<List<PhotoModel>>(
+                    future: _photosFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting)
+                        return const Center(child: CircularProgressIndicator());
+                      if (!snapshot.hasData || snapshot.data!.isEmpty)
+                        return const Text("Belum ada foto.");
+
+                      return SizedBox(
+                        height: 100,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: snapshot.data!.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  _buildImageUrl(
+                                    snapshot.data![index].imagePath,
+                                  ),
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+
                   const Divider(height: 48, thickness: 1),
-                  const Text(
-                    "Ulasan Pengunjung",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+                  // --- SEKSI ULASAN (DENGAN GAMBAR) ---
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Ulasan Pengunjung",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: _showAddReviewModal,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text("Beri Ulasan"),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
-
-                  // --- AREA DAFTAR REVIEW ---
                   FutureBuilder<List<ReviewModel>>(
                     future: _reviewsFuture,
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
+                      if (snapshot.connectionState == ConnectionState.waiting)
                         return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return Text("Gagal memuat ulasan: ${snapshot.error}");
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(
-                            child: Text(
-                              "Belum ada ulasan. Jadilah yang pertama!",
-                            ),
-                          ),
-                        );
-                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty)
+                        return const Center(child: Text("Belum ada ulasan."));
 
                       final listReview = snapshot.data!;
                       return ListView.builder(
-                        shrinkWrap:
-                            true, // Wajib agar tidak error dalam SingleChildScrollView
-                        physics:
-                            const NeverScrollableScrollPhysics(), // Scroll mengikuti SingleChildScrollView induk
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: listReview.length,
                         itemBuilder: (context, index) {
                           final review = listReview[index];
                           return Card(
-                            elevation: 1,
-                            margin: const EdgeInsets.only(bottom: 12),
+                            elevation: 2,
+                            margin: const EdgeInsets.only(bottom: 16),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Column(
@@ -316,6 +449,22 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                       review.comment,
                                       style: const TextStyle(
                                         color: Colors.black87,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+
+                                  // --- MUNCULKAN FOTO DI DALAM REVIEW JIKA ADA ---
+                                  if (review.imagePath != null &&
+                                      review.imagePath!.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        _buildImageUrl(review.imagePath!),
+                                        height: 150,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
                                       ),
                                     ),
                                   ],
@@ -327,9 +476,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                       );
                     },
                   ),
-                  const SizedBox(
-                    height: 80,
-                  ), // Jarak ekstra di bawah biar gak ketutup tombol Floating
+                  const SizedBox(height: 40),
                 ],
               ),
             ),

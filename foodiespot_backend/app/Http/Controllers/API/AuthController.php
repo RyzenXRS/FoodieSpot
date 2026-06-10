@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    // --- FUNGSI REGISTER ---
+    // Register
     public function register(Request $request)
     {
         // 1. Validasi input dari Flutter
@@ -47,13 +47,13 @@ class AuthController extends Controller
         ], 201);
     }
 
-    // --- FUNGSI LOGIN ---
+    // Login
     public function login(Request $request)
     {
-        // 1. Cek email ada atau tidak
+        // Cek email ada atau tidak
         $user = User::where('email', $request->email)->first();
 
-        // 2. Validasi kredensial (Email salah ATAU Password salah)
+        // Validasi Login
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => 'error',
@@ -61,7 +61,7 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // 3. Validasi Suspend (Penting untuk FoodieSpot)
+        // Validasi Suspend
         if ($user->is_suspended) {
             return response()->json([
                 'status' => 'error',
@@ -69,7 +69,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // 4. Buat Token baru
+        // Create Token
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -80,8 +80,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-    // --- FUNGSI LOGOUT ---
-    // --- FUNGSI LOGOUT ---
+    // Logout
     public function logout(Request $request)
     {
         // Pastikan user benar-benar terdeteksi oleh Sanctum sebelum menghapus token

@@ -10,10 +10,9 @@ use Illuminate\Support\Facades\Validator;
 
 class ReviewController extends Controller
 {
-    // --- 1. LIHAT SEMUA REVIEW DI SATU TEMPAT MAKAN ---
     public function index($tempatMakanId)
     {
-        // Ambil review beserta nama user yang mereview
+        // Ambil Review
         $reviews = Review::with('user:id,name,photo_url')
                     ->where('tempat_makan_id', $tempatMakanId)
                     ->latest()
@@ -25,44 +24,55 @@ class ReviewController extends Controller
         ], 200);
     }
 
-    // --- 2. TAMBAH REVIEW BARU ---
+    // Tambah Review
     public function store(Request $request, $tempatMakanId)
     {
-        // Pastikan hanya role 'user' yang bisa kasih review
         if ($request->user()->role !== 'user') {
             return response()->json(['status' => 'error', 'message' => 'Hanya pelanggan yang dapat memberikan review'], 403);
         }
 
+        // Validasi bisa menerima teks form data dan file gambar sekaligus
         $validator = Validator::make($request->all(), [
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Validasi foto
         ]);
 
         if ($validator->fails()) {
             return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 400);
         }
 
-        // Cek apakah user sudah pernah mereview tempat ini (Biar gak spam)
         $existingReview = Review::where('user_id', $request->user()->id)
-                                ->where('tempat_makan_id', $tempatMakanId)
-                                ->first();
+                                ->where('tempat_makan_id', $tempatMakanId)->first();
 
         if ($existingReview) {
             return response()->json(['status' => 'error', 'message' => 'Anda sudah memberikan review untuk tempat ini'], 400);
         }
 
-        // Simpan Review
+        $imagePath = null;
+
+        // Jika user melampirkan foto saat review...
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('tempat_makan_photos', 'public');
+            
+            // --- TRIK MAGIS ---
+            // Otomatis buat data di tabel Photos agar galeri foto tetap berfungsi!
+            \App\Models\Photo::create([
+                'user_id' => $request->user()->id,
+                'tempat_makan_id' => $tempatMakanId,
+                'image_path' => $imagePath,
+            ]);
+        }
+
         $review = Review::create([
             'user_id' => $request->user()->id,
             'tempat_makan_id' => $tempatMakanId,
             'rating' => $request->rating,
             'comment' => $request->comment,
+            'image_path' => $imagePath, // Simpan di review juga
         ]);
 
-        // Kalkulasi ulang rata-rata rating di tabel tempat_makan
         $this->updateAverageRating($tempatMakanId);
-
-        // Load data user agar respons bisa langsung dipakai di UI Flutter
         $review->load('user:id,name,photo_url');
 
         return response()->json([
@@ -72,7 +82,7 @@ class ReviewController extends Controller
         ], 201);
     }
 
-    // --- 3. HAPUS REVIEW (Bisa oleh User yang nulis atau Admin) ---
+    // HAPUS REVIEW 
     public function destroy(Request $request, $id)
     {
         $review = Review::find($id);
@@ -94,12 +104,11 @@ class ReviewController extends Controller
         return response()->json(['status' => 'success', 'message' => 'Review berhasil dihapus'], 200);
     }
 
-    // --- FUNGSI HELPER: Kalkulasi Rata-rata Rating ---
+    //Kalkulasi Rata-rata Rating 
     private function updateAverageRating($tempatMakanId)
     {
         $rataRata = Review::where('tempat_makan_id', $tempatMakanId)->avg('rating');
         
-        // Update data rating di tabel tempat_makan
         TempatMakan::where('id', $tempatMakanId)->update([
             'rating' => round($rataRata ?? 0, 1) // Jika null (tidak ada review), set 0
         ]);

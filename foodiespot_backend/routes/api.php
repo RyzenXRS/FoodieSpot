@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\TempatMakanController;
 use App\Http\Controllers\API\ReviewController; 
+use App\Http\Controllers\API\PhotoController; 
+
 
 // Route yang bebas diakses tanpa token (Publik)
 Route::post('/register', [AuthController::class, 'register']);
@@ -26,4 +28,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tempat-makan/{id}/reviews', [ReviewController::class, 'index']);
     Route::post('/tempat-makan/{id}/reviews', [ReviewController::class, 'store']);
     Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
+
+    Route::get('/tempat-makan/{id}/photos', [PhotoController::class, 'index']);
+    Route::post('/tempat-makan/{id}/photos', [PhotoController::class, 'store']);
+    Route::delete('/photos/{id}', [PhotoController::class, 'destroy']);
 });
