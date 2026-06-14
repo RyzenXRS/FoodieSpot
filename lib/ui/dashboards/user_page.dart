@@ -123,7 +123,8 @@ class _UserHomePageState extends State<UserHomePage> {
                         final picker = ImagePicker();
                         final pickedFile = await picker.pickImage(
                           source: ImageSource.gallery,
-                          imageQuality: 70,
+                          imageQuality:
+                              30, // Kualitas diturunkan agar file KTP tidak sampai 2MB
                         );
                         if (pickedFile != null) {
                           setModalState(
@@ -207,7 +208,9 @@ class _UserHomePageState extends State<UserHomePage> {
                                   selectedKtp!,
                                 );
                                 if (mounted) {
-                                  Navigator.pop(ctx);
+                                  Navigator.pop(
+                                    ctx,
+                                  ); // Tutup pop-up jika sukses
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
@@ -216,10 +219,10 @@ class _UserHomePageState extends State<UserHomePage> {
                                       backgroundColor: Colors.green,
                                     ),
                                   );
-                                  _fetchStatusPengajuan();
+                                  _fetchStatusPengajuan(); // Segarkan tombol di AppBar
                                 }
                               } catch (e) {
-                                if (mounted)
+                                if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
@@ -231,9 +234,9 @@ class _UserHomePageState extends State<UserHomePage> {
                                       backgroundColor: Colors.red,
                                     ),
                                   );
-                              } finally {
-                                if (mounted)
+                                  // Matikan loading HANYA saat terjadi error
                                   setModalState(() => isSubmitting = false);
+                                }
                               }
                             },
                             child: const Text(
@@ -245,7 +248,7 @@ class _UserHomePageState extends State<UserHomePage> {
                             ),
                           ),
                   ] else ...[
-                    // Bagian Status Pending tetap sama...
+                    // --- BAGIAN STATUS PENDING ---
                     const Icon(
                       Icons.access_time_filled,
                       color: Colors.blue,
@@ -276,7 +279,9 @@ class _UserHomePageState extends State<UserHomePage> {
                               try {
                                 await PengajuanOwnerService().batalkan();
                                 if (mounted) {
-                                  Navigator.pop(ctx);
+                                  Navigator.pop(
+                                    ctx,
+                                  ); // Tutup pop-up jika sukses dibatalkan
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text("Pengajuan dibatalkan"),
@@ -286,7 +291,7 @@ class _UserHomePageState extends State<UserHomePage> {
                                   _fetchStatusPengajuan();
                                 }
                               } catch (e) {
-                                if (mounted)
+                                if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
@@ -298,9 +303,9 @@ class _UserHomePageState extends State<UserHomePage> {
                                       backgroundColor: Colors.red,
                                     ),
                                   );
-                              } finally {
-                                if (mounted)
+                                  // Matikan loading HANYA saat terjadi error
                                   setModalState(() => isSubmitting = false);
+                                }
                               }
                             },
                             style: OutlinedButton.styleFrom(
@@ -329,7 +334,7 @@ class _UserHomePageState extends State<UserHomePage> {
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
         actions: [
-          // --- TOMBOL JADI MITRA YANG MENCURI PERHATIAN ---
+          // --- TOMBOL JADI MITRA / PENDING ---
           if (!_isLoadingPengajuan)
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -352,18 +357,17 @@ class _UserHomePageState extends State<UserHomePage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _pengajuan == null
                       ? Colors.white
-                      : Colors
-                            .blue[50], // Putih jika belum, Biru muda jika pending
+                      : Colors.blue[50],
                   foregroundColor: _pengajuan == null
                       ? Colors.orange
-                      : Colors.blue, // Teks orange jika belum
+                      : Colors.blue,
                   elevation: 1,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
               ),
             ),
 
-          // Tombol Profil
+          // --- TOMBOL PROFIL ---
           IconButton(
             icon: const Icon(Icons.account_circle, size: 28),
             onPressed: () async {
@@ -378,18 +382,21 @@ class _UserHomePageState extends State<UserHomePage> {
               }
             },
           ),
-          const SizedBox(width: 8), // Sedikit jarak dari pinggir layar
+          const SizedBox(width: 8),
         ],
       ),
       body: FutureBuilder<List<TempatMakanModel>>(
         future: _tempatMakanFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError)
+          }
+          if (snapshot.hasError) {
             return Center(child: Text("Gagal memuat data: ${snapshot.error}"));
-          if (!snapshot.hasData || snapshot.data!.isEmpty)
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text("Belum ada tempat makan."));
+          }
 
           final listTempat = snapshot.data!;
 

@@ -12,8 +12,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  String _selectedRole = 'user';
-  bool _isLoading = false;
+  bool _isLoading = false; // Variabel _selectedRole SUDAH DIHAPUS
 
   // --- Fungsi untuk memunculkan notifikasi di atas ---
   void _showTopNotification(String message, Color color) {
@@ -57,11 +56,13 @@ class _RegisterPageState extends State<RegisterPage> {
           "Registrasi berhasil! Membuka halaman utama...",
           Colors.green,
         );
-        // Navigator.pop(context) tidak perlu lagi karena RoleChecker akan otomatis menarik kita ke Home
       }
     } catch (e) {
       if (mounted) {
-        _showTopNotification("Gagal Register: ${e.toString()}", Colors.red);
+        _showTopNotification(
+          "Gagal Register: ${e.toString().replaceAll('Exception: ', '')}",
+          Colors.red,
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -71,45 +72,60 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Register FoodieSpot")),
+      appBar: AppBar(
+        title: const Text("Register FoodieSpot"),
+        backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const Icon(Icons.app_registration, size: 80, color: Colors.orange),
+            const SizedBox(height: 24),
             TextField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Nama Lengkap'),
+              decoration: const InputDecoration(
+                labelText: 'Nama Lengkap',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _emailCtrl,
-              decoration: const InputDecoration(labelText: 'Email'),
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _passwordCtrl,
-              decoration: const InputDecoration(labelText: 'Password'),
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+              ),
               obscureText: true,
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedRole,
-              items: const [
-                DropdownMenuItem(
-                  value: 'user',
-                  child: Text('User / Pengunjung'),
-                ),
-                DropdownMenuItem(value: 'owner', child: Text('Owner Warung')),
-              ],
-              onChanged: (val) => setState(() => _selectedRole = val!),
-              decoration: const InputDecoration(labelText: 'Daftar Sebagai'),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             _isLoading
-                ? const CircularProgressIndicator()
+                ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
                     onPressed: _register,
-                    child: const Text("Register"),
+                    child: const Text(
+                      "Daftar Sekarang",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
           ],
         ),

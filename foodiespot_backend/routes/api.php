@@ -6,8 +6,8 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\TempatMakanController;
 use App\Http\Controllers\API\ReviewController; 
 use App\Http\Controllers\API\PhotoController; 
-use App\Http\Controllers\Api\PengajuanOwnerController;
-
+use App\Http\Controllers\API\PengajuanOwnerController;
+use App\Http\Controllers\API\AdminController;
 
 // Route yang bebas diakses tanpa token (Publik)
 Route::post('/register', [AuthController::class, 'register']);
@@ -38,4 +38,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/pengajuan-owner', [PengajuanOwnerController::class, 'cekStatus']);
     Route::post('/pengajuan-owner', [PengajuanOwnerController::class, 'ajukan']);
     Route::delete('/pengajuan-owner', [PengajuanOwnerController::class, 'batalkan']);
+
+    // --- ROUTE KHUSUS ADMIN ---
+    Route::get('/admin/pengajuan', [AdminController::class, 'getPengajuan']);
+    Route::post('/admin/pengajuan/{id}/approve', [AdminController::class, 'setujuiPengajuan']);
+    Route::post('/admin/pengajuan/{id}/reject', [AdminController::class, 'tolakPengajuan']);
 });

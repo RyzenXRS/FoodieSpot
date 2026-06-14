@@ -61,12 +61,20 @@ class PengajuanOwnerService {
         await http.MultipartFile.fromPath('ktp_image', ktpImage.path),
       );
 
-      var streamedResponse = await request.send();
+      var streamedResponse = await request.send().timeout(
+        const Duration(seconds: 15),
+      );
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode != 201) {
-        final data = json.decode(response.body);
-        throw Exception(data['message'] ?? 'Gagal mengajukan kemitraan');
+        try {
+          final data = json.decode(response.body);
+          throw Exception(data['message'] ?? 'Gagal mengajukan kemitraan');
+        } catch (e) {
+          throw Exception(
+            'Terjadi kesalahan di server (Error ${response.statusCode})',
+          );
+        }
       }
     } catch (e) {
       throw Exception(e.toString());
