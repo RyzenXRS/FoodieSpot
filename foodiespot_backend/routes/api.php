@@ -43,4 +43,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/pengajuan', [AdminController::class, 'getPengajuan']);
     Route::post('/admin/pengajuan/{id}/approve', [AdminController::class, 'setujuiPengajuan']);
     Route::post('/admin/pengajuan/{id}/reject', [AdminController::class, 'tolakPengajuan']);
+
+    Route::get('/owner/tempat-makan', [App\Http\Controllers\API\TempatMakanController::class, 'myTempatMakan']);
 });

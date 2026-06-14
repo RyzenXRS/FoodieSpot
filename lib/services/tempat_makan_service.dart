@@ -1,20 +1,18 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/tempat_makan_model.dart';
 import '../utils/constants.dart';
 
 class TempatMakanService {
-  // Helper internal untuk mengambil token
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token');
   }
 
-  // --- 1. AMBIL DAFTAR TEMPAT MAKAN (READ) ---
   Future<List<TempatMakanModel>> getTempatMakan() async {
     String? token = await _getToken();
-
     try {
       final response = await http
           .get(
@@ -24,84 +22,129 @@ class TempatMakanService {
               'Authorization': 'Bearer $token',
             },
           )
-          .timeout(const Duration(seconds: 10));
-
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
         final data = json.decode(response.body)['data'] as List;
         return data.map((item) => TempatMakanModel.fromJson(item)).toList();
-      } else {
-        throw Exception(
-          json.decode(response.body)['message'] ?? 'Gagal memuat data',
-        );
       }
+      throw Exception('Gagal memuat tempat makan');
     } catch (e) {
       throw Exception('Kesalahan jaringan: $e');
     }
   }
 
-  // --- 2. TAMBAH TEMPAT MAKAN BARU (CREATE) ---
+  Future<List<TempatMakanModel>> getMyTempatMakan() async {
+    String? token = await _getToken();
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${ApiConfig.baseUrl}/owner/tempat-makan'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body)['data'] as List;
+        return data.map((item) => TempatMakanModel.fromJson(item)).toList();
+      }
+      throw Exception('Gagal memuat daftar warung Anda');
+    } catch (e) {
+      throw Exception('Kesalahan jaringan: $e');
+    }
+  }
+
+  // --- 3. TAMBAH WARUNG (MULTIPART REQUEST) ---
   Future<void> addTempatMakan({
     required String name,
-    required String desc,
     required String address,
+    required String description,
+    File? imageFile,
   }) async {
     String? token = await _getToken();
-
     try {
-      final response = await http.post(
+      var request = http.MultipartRequest(
+        'POST',
         Uri.parse('${ApiConfig.baseUrl}/tempat-makan'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: {'name': name, 'description': desc, 'address': address},
       );
+      request.headers.addAll({
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
+
+      request.fields['name'] = name;
+      request.fields['address'] = address;
+      request.fields['description'] = description;
+
+      if (imageFile != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('image', imageFile.path),
+        );
+      }
+
+      var streamedResponse = await request.send().timeout(
+        const Duration(seconds: 20),
+      );
+      var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode != 201) {
-        throw Exception(
-          json.decode(response.body)['message'] ?? 'Gagal menambahkan data',
-        );
+        final data = json.decode(response.body);
+        throw Exception(data['message'] ?? 'Gagal menambahkan tempat makan');
       }
     } catch (e) {
-      throw Exception('Kesalahan jaringan: $e');
+      throw Exception(e.toString());
     }
   }
 
-  // --- 3. EDIT TEMPAT MAKAN (UPDATE) ---
-  Future<void> updateTempatMakan({
+  // --- 4. EDIT WARUNG (MULTIPART REQUEST - SPOOFING METHOD TO POST) ---
+  Future<void> editTempatMakan({
     required int id,
     required String name,
-    required String desc,
     required String address,
+    required String description,
+    File? imageFile,
   }) async {
     String? token = await _getToken();
-
     try {
-      final response = await http.put(
-        Uri.parse(
-          '${ApiConfig.baseUrl}/tempat-makan/$id',
-        ), // Perhatikan ada tambahan ID di URL
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: {'name': name, 'description': desc, 'address': address},
+      // Catatan Teknis: Multipart di Laravel untuk metode PUT/PATCH sering bermasalah membaca file data,
+      // solusinya kita gunakan POST di request, namun menambahkan field '_method' = 'PUT' (Metode Spoofing)
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConfig.baseUrl}/tempat-makan/$id'),
       );
+      request.headers.addAll({
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
 
-      if (response.statusCode != 200) {
-        throw Exception(
-          json.decode(response.body)['message'] ?? 'Gagal mengedit data',
+      request.fields['_method'] = 'PUT'; // Trik magis Laravel
+      request.fields['name'] = name;
+      request.fields['address'] = address;
+      request.fields['description'] = description;
+
+      if (imageFile != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('image', imageFile.path),
         );
       }
+
+      var streamedResponse = await request.send().timeout(
+        const Duration(seconds: 20),
+      );
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode != 200) {
+        final data = json.decode(response.body);
+        throw Exception(data['message'] ?? 'Gagal memperbarui tempat makan');
+      }
     } catch (e) {
-      throw Exception('Kesalahan jaringan: $e');
+      throw Exception(e.toString());
     }
   }
 
-  // --- 4. HAPUS TEMPAT MAKAN (DELETE) ---
   Future<void> deleteTempatMakan(int id) async {
     String? token = await _getToken();
-
     try {
       final response = await http.delete(
         Uri.parse('${ApiConfig.baseUrl}/tempat-makan/$id'),
@@ -110,14 +153,10 @@ class TempatMakanService {
           'Authorization': 'Bearer $token',
         },
       );
-
-      if (response.statusCode != 200) {
-        throw Exception(
-          json.decode(response.body)['message'] ?? 'Gagal menghapus data',
-        );
-      }
+      if (response.statusCode != 200 && response.statusCode != 204)
+        throw Exception('Gagal menghapus tempat makan');
     } catch (e) {
-      throw Exception('Kesalahan jaringan: $e');
+      throw Exception(e.toString());
     }
   }
 }

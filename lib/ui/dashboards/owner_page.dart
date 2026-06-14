@@ -4,7 +4,8 @@ import '../../services/tempat_makan_service.dart';
 import '../../models/tempat_makan_model.dart';
 import '../splash/role_checker.dart';
 import '../tempat_makan/add_tempat_makan_page.dart';
-import '../tempat_makan/edit_tempat_makan_page.dart';
+import '../tempat_makan/edit_tempat_makan_page.dart'; // <-- IMPORT BARU
+import '../tempat_makan/detail_tempat_makan_page.dart'; // <-- IMPORT BARU
 
 class OwnerHomePage extends StatefulWidget {
   const OwnerHomePage({super.key});
@@ -14,7 +15,7 @@ class OwnerHomePage extends StatefulWidget {
 }
 
 class _OwnerHomePageState extends State<OwnerHomePage> {
-  late Future<List<TempatMakanModel>> _tempatMakanFuture;
+  late Future<List<TempatMakanModel>> _myTempatMakanFuture;
 
   @override
   void initState() {
@@ -24,165 +25,237 @@ class _OwnerHomePageState extends State<OwnerHomePage> {
 
   void _fetchData() {
     setState(() {
-      _tempatMakanFuture = TempatMakanService().getTempatMakan();
+      _myTempatMakanFuture = TempatMakanService().getMyTempatMakan();
     });
+  }
+
+  void _konfirmasiHapus(int id, String nama) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Hapus Warung?"),
+        content: Text(
+          "Yakin ingin menutup '$nama' secara permanen? Semua foto dan review juga akan lenyap.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Batal"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await TempatMakanService().deleteTempatMakan(id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Warung berhasil ditutup."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  _fetchData();
+                }
+              } catch (e) {
+                if (mounted)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+              }
+            },
+            child: const Text(
+              "Ya, Tutup Warung",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Dashboard Owner"),
+        title: const Text("Dashboard Juragan"),
+        backgroundColor: Colors.green[800],
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await AuthService().signOut();
-              if (context.mounted) {
+              if (context.mounted)
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (_) => const RoleChecker()),
                   (route) => false,
                 );
-              }
             },
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.orange,
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.green[800],
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_business),
+        label: const Text("Warung Baru"),
         onPressed: () async {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AddTempatMakanPage()),
           );
-          if (result == true) {
-            _fetchData();
-          }
+          if (result == true) _fetchData();
         },
       ),
       body: FutureBuilder<List<TempatMakanModel>>(
-        future: _tempatMakanFuture,
+        future: _myTempatMakanFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting)
             return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
+          if (snapshot.hasError)
+            return Center(child: Text("Gagal memuat: ${snapshot.error}"));
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
-              child: Text(
-                "Error: ${snapshot.error}",
-                textAlign: TextAlign.center,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.store_mall_directory_outlined,
+                    size: 80,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Anda belum mendaftarkan warung.",
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                ],
               ),
-            );
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text("Belum ada tempat makan yang didaftarkan."),
             );
           }
 
-          final listTempat = snapshot.data!;
-
+          final listWarung = snapshot.data!;
           return RefreshIndicator(
             onRefresh: () async => _fetchData(),
             child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: listTempat.length,
+              padding: const EdgeInsets.all(12),
+              itemCount: listWarung.length,
               itemBuilder: (context, index) {
-                final item = listTempat[index];
+                final item = listWarung[index];
                 return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.orange,
-                      child: Icon(Icons.storefront, color: Colors.white),
-                    ),
-                    title: Text(
-                      item.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      item.address,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // EDIT
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    EditTempatMakanPage(tempatMakan: item),
-                              ),
-                            );
-                            if (result == true) {
-                              _fetchData(); // Refresh list jika berhasil edit
-                            }
-                          },
+                  elevation: 3,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  clipBehavior: Clip.antiAlias, // Biar rapi pas diklik
+                  child: InkWell(
+                    // --- BISA DIKLIK UNTUK UPLOAD FOTO ---
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              DetailTempatMakanPage(tempatMakan: item),
                         ),
-
-                        // --- TOMBOL DELETE ---
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            // Munculkan Dialog Konfirmasi
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text("Hapus Tempat Makan?"),
-                                content: Text(
-                                  "Apakah Anda yakin ingin menghapus '${item.name}'?",
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Placeholder Hijau (Bisa diganti foto asli nanti lewat backend kalau mau)
+                        Container(
+                          height: 120,
+                          width: double.infinity,
+                          decoration: BoxDecoration(color: Colors.green[200]),
+                          child: const Icon(
+                            Icons.storefront,
+                            size: 50,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.name,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: const Text("Batal"),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star,
+                                    size: 16,
+                                    color: Colors.amber,
                                   ),
-                                  TextButton(
-                                    onPressed: () async {
-                                      Navigator.pop(ctx); // Tutup dialog
-                                      try {
-                                        await TempatMakanService()
-                                            .deleteTempatMakan(item.id);
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text("Berhasil dihapus"),
-                                              backgroundColor: Colors.orange,
-                                            ),
-                                          );
-                                          _fetchData(); // Refresh list setelah hapus
-                                        }
-                                      } catch (e) {
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(e.toString()),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    },
-                                    child: const Text(
-                                      "Hapus",
-                                      style: TextStyle(color: Colors.red),
+                                  Text(
+                                    " ${item.rating.toStringAsFixed(1)}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
                               ),
-                            );
-                          },
+                              const SizedBox(height: 8),
+                              Text(
+                                item.address,
+                                style: const TextStyle(color: Colors.grey),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const Divider(height: 30),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () =>
+                                        _konfirmasiHapus(item.id, item.name),
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                      size: 18,
+                                    ),
+                                    label: const Text(
+                                      "Hapus",
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Colors.red),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+
+                                  // --- TOMBOL EDIT SUDAH BERFUNGSI ---
+                                  ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => EditTempatMakanPage(
+                                            tempatMakan: item,
+                                          ),
+                                        ),
+                                      );
+                                      if (result == true) _fetchData();
+                                    },
+                                    icon: const Icon(Icons.edit, size: 18),
+                                    label: const Text("Edit"),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green[800],
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),

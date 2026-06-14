@@ -1,10 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/tempat_makan_model.dart';
 import '../../services/tempat_makan_service.dart';
+import '../../utils/constants.dart';
 
 class EditTempatMakanPage extends StatefulWidget {
-  final TempatMakanModel tempatMakan; // Menerima data yang mau diedit
-
+  final TempatMakanModel tempatMakan;
   const EditTempatMakanPage({super.key, required this.tempatMakan});
 
   @override
@@ -13,23 +15,28 @@ class EditTempatMakanPage extends StatefulWidget {
 
 class _EditTempatMakanPageState extends State<EditTempatMakanPage> {
   late TextEditingController _nameCtrl;
-  late TextEditingController _descCtrl;
   late TextEditingController _addressCtrl;
+  late TextEditingController _descCtrl;
+  File? _newSelectedImage;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Isi form dengan data yang sudah ada
     _nameCtrl = TextEditingController(text: widget.tempatMakan.name);
-    _descCtrl = TextEditingController(text: widget.tempatMakan.description);
     _addressCtrl = TextEditingController(text: widget.tempatMakan.address);
+    _descCtrl = TextEditingController(text: widget.tempatMakan.description);
   }
 
-  void _submit() async {
+  String _buildImageUrl(String imagePath) {
+    String rootUrl = ApiConfig.baseUrl.replaceAll('/api', '');
+    return '$rootUrl/storage/$imagePath';
+  }
+
+  void _simpanEdit() async {
     if (_nameCtrl.text.isEmpty ||
-        _descCtrl.text.isEmpty ||
-        _addressCtrl.text.isEmpty) {
+        _addressCtrl.text.isEmpty ||
+        _descCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Semua kolom wajib diisi!"),
@@ -41,28 +48,30 @@ class _EditTempatMakanPageState extends State<EditTempatMakanPage> {
 
     setState(() => _isLoading = true);
     try {
-      await TempatMakanService().updateTempatMakan(
-        id: widget.tempatMakan.id, // Kirim ID tempat makan
+      await TempatMakanService().editTempatMakan(
+        id: widget.tempatMakan.id,
         name: _nameCtrl.text.trim(),
-        desc: _descCtrl.text.trim(),
         address: _addressCtrl.text.trim(),
+        description: _descCtrl.text.trim(),
+        imageFile: _newSelectedImage,
       );
-
       if (mounted) {
+        Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Tempat makan berhasil diperbarui!"),
-            backgroundColor: Colors.blue,
+            content: Text("Informasi warung berhasil diperbarui!"),
+            backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // Kembali ke dashboard dengan nilai true
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            backgroundColor: Colors.red,
+          ),
         );
-      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -71,26 +80,77 @@ class _EditTempatMakanPageState extends State<EditTempatMakanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Edit Tempat Makan")),
+      appBar: AppBar(
+        title: const Text("Edit Informasi Warung"),
+        backgroundColor: Colors.green[800],
+        foregroundColor: Colors.white,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const Text(
+              "Ubah Foto Sampul",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () async {
+                final picker = ImagePicker();
+                final pickedFile = await picker.pickImage(
+                  source: ImageSource.gallery,
+                  imageQuality: 50,
+                );
+                if (pickedFile != null)
+                  setState(() => _newSelectedImage = File(pickedFile.path));
+              },
+              child: Container(
+                height: 160,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey[400]!),
+                ),
+                child: _newSelectedImage != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          _newSelectedImage!,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : (widget.tempatMakan.imagePath != null &&
+                          widget.tempatMakan.imagePath!.isNotEmpty)
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          _buildImageUrl(widget.tempatMakan.imagePath!),
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo, color: Colors.grey, size: 40),
+                          SizedBox(height: 8),
+                          Text(
+                            "Klik untuk ganti gambar sampul",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+            const SizedBox(height: 24),
             TextField(
               controller: _nameCtrl,
               decoration: const InputDecoration(
-                labelText: 'Nama Tempat Makan',
+                labelText: "Nama Warung / Resto",
                 border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _descCtrl,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Deskripsi',
-                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.badge),
               ),
             ),
             const SizedBox(height: 16),
@@ -98,23 +158,37 @@ class _EditTempatMakanPageState extends State<EditTempatMakanPage> {
               controller: _addressCtrl,
               maxLines: 2,
               decoration: const InputDecoration(
-                labelText: 'Alamat Lengkap',
+                labelText: "Alamat Lengkap",
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.location_on),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _descCtrl,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: "Deskripsi",
+                border: OutlineInputBorder(),
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 40),
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
-                    onPressed: _submit,
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.all(16),
-                      backgroundColor: Colors.blue,
+                      backgroundColor: Colors.green[800],
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
+                    onPressed: _simpanEdit,
                     child: const Text(
                       "Simpan Perubahan",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
           ],
