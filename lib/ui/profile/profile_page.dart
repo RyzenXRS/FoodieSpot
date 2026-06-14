@@ -53,7 +53,6 @@ class _ProfilePageState extends State<ProfilePage> {
       _showTopNotification("Nama tidak boleh kosong!", Colors.red);
       return;
     }
-
     setState(() => _isLoading = true);
     try {
       await AuthService().updateProfile(
@@ -65,7 +64,6 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       _showTopNotification(e.toString(), Colors.red);
     } finally {
-      // <--- INI YANG BENAR (huruf L nya dua)
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -76,7 +74,7 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (ctx) => AlertDialog(
         title: const Text("Hapus Akun Permanen?"),
         content: const Text(
-          "Tindakan ini tidak bisa dibatalkan. Semua data Anda akan dihapus dari sistem.",
+          "Tindakan ini tidak bisa dibatalkan. Semua data Anda akan dihapus.",
         ),
         actions: [
           TextButton(
@@ -90,10 +88,7 @@ class _ProfilePageState extends State<ProfilePage> {
               try {
                 await AuthService().deleteAccount();
                 if (mounted) {
-                  _showTopNotification(
-                    "Akun Anda berhasil dihapus.",
-                    Colors.orange,
-                  );
+                  _showTopNotification("Akun berhasil dihapus.", Colors.orange);
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (_) => const RoleChecker()),
@@ -170,6 +165,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 32),
+
                   if (!_isEditing) ...[
                     ElevatedButton.icon(
                       onPressed: () => setState(() => _isEditing = true),
@@ -192,6 +188,32 @@ class _ProfilePageState extends State<ProfilePage> {
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(50),
                         side: const BorderSide(color: Colors.red),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // --- TOMBOL LOGOUT DIPINDAH KESINI ---
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        await AuthService().signOut();
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const RoleChecker(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.logout, color: Colors.grey),
+                      label: const Text(
+                        "Logout",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        side: const BorderSide(color: Colors.grey),
                       ),
                     ),
                   ] else ...[

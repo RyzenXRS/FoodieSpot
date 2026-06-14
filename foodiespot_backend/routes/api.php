@@ -6,6 +6,7 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\TempatMakanController;
 use App\Http\Controllers\API\ReviewController; 
 use App\Http\Controllers\API\PhotoController; 
+use App\Http\Controllers\Api\PengajuanOwnerController;
 
 
 // Route yang bebas diakses tanpa token (Publik)
@@ -24,7 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // API Route untuk Tempat Makan
     Route::apiResource('tempat-makan', TempatMakanController::class);
 
-    // --- TAMBAHKAN ROUTE REVIEW INI ---
+    // --- ROUTE REVIEW INI ---
     Route::get('/tempat-makan/{id}/reviews', [ReviewController::class, 'index']);
     Route::post('/tempat-makan/{id}/reviews', [ReviewController::class, 'store']);
     Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
@@ -32,4 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tempat-makan/{id}/photos', [PhotoController::class, 'index']);
     Route::post('/tempat-makan/{id}/photos', [PhotoController::class, 'store']);
     Route::delete('/photos/{id}', [PhotoController::class, 'destroy']);
+
+    // --- ROUTE PENGAJUAN OWNER ---
+    Route::get('/pengajuan-owner', [PengajuanOwnerController::class, 'cekStatus']);
+    Route::post('/pengajuan-owner', [PengajuanOwnerController::class, 'ajukan']);
+    Route::delete('/pengajuan-owner', [PengajuanOwnerController::class, 'batalkan']);
 });

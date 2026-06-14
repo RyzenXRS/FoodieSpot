@@ -5,23 +5,18 @@ import '../models/user_model.dart';
 import '../utils/constants.dart';
 
 class AuthService {
-  // --- FUNGSI REGISTER ---
+  // --- REGISTER ---
   Future<void> registerUser({
     required String name,
     required String email,
     required String password,
-    required String role,
   }) async {
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/register'),
-        body: {
-          'name': name,
-          'email': email,
-          'password': password,
-          'role': role,
-        },
+        body: {'name': name, 'email': email, 'password': password},
       );
+      //
 
       final responseData = json.decode(response.body);
 

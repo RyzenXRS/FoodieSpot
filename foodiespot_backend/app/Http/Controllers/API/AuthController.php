@@ -11,32 +11,26 @@ use Illuminate\Support\Facades\Validator;
 class AuthController extends Controller
 {
     // Register
+    // --- FUNGSI REGISTER BARU (Otomatis jadi User) ---
     public function register(Request $request)
     {
-        // 1. Validasi input dari Flutter
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'required|in:user,owner', // Admin tidak boleh didaftarkan lewat API biasa
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $validator->errors()->first()
-            ], 400);
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 400);
         }
 
-        // 2. Simpan user ke database
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'role' => 'user', // PAKSA SEMUA PENDAFTAR BARU JADI 'user'
         ]);
 
-        // 3. Generate Token (Biar user bisa langsung login setelah register)
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([

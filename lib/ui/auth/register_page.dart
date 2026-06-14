@@ -48,8 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
       await AuthService().registerUser(
         name: _nameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text,
-        role: _selectedRole,
+        password: _passwordCtrl.text.trim(),
       );
 
       // Munculkan notifikasi sukses
