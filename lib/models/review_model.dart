@@ -5,7 +5,8 @@ class ReviewModel {
   final int rating;
   final String comment;
   final String userName;
-  final String? imagePath; // <-- Tambahan
+  final String? imagePath;
+  final String? reply; // <-- TAMBAHAN
 
   ReviewModel({
     required this.id,
@@ -14,7 +15,8 @@ class ReviewModel {
     required this.rating,
     required this.comment,
     required this.userName,
-    this.imagePath, // <-- Tambahan
+    this.imagePath,
+    this.reply, // <-- TAMBAHAN
   });
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
@@ -25,7 +27,8 @@ class ReviewModel {
       rating: json['rating'] ?? 0,
       comment: json['comment'] ?? '',
       userName: json['user'] != null ? json['user']['name'] : 'User',
-      imagePath: json['image_path'], // <-- Tambahan
+      imagePath: json['image_path'],
+      reply: json['reply'],
     );
   }
 }

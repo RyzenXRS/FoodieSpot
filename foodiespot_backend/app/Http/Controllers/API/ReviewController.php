@@ -113,5 +113,39 @@ class ReviewController extends Controller
             'rating' => round($rataRata ?? 0, 1) // Jika null (tidak ada review), set 0
         ]);
     }
+
+    // --- OWNER MEMBALAS REVIEW ---
+    public function reply(Request $request, $id)
+    {
+        $review = Review::find($id);
+
+        if (!$review) {
+            return response()->json(['status' => 'error', 'message' => 'Review tidak ditemukan'], 404);
+        }
+
+        // Cari data warungnya untuk ngecek siapa pemiliknya
+        $tempatMakan = \App\Models\TempatMakan::find($review->tempat_makan_id);
+
+        // Proteksi tingkat tinggi: Hanya PEMILIK WARUNG yang boleh membalas!
+        if ($tempatMakan->user_id !== $request->user()->id) {
+            return response()->json(['status' => 'error', 'message' => 'Hanya pemilik warung yang berhak membalas ulasan ini.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'reply' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 400);
+        }
+
+        $review->update(['reply' => $request->reply]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Berhasil membalas ulasan pelanggan',
+            'data' => $review
+        ], 200);
+    }
 }
 // Test

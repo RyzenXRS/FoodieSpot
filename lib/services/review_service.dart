@@ -82,4 +82,28 @@ class ReviewService {
       throw Exception(e.toString());
     }
   }
+
+  // --- 3. BALAS REVIEW (KHUSUS OWNER) ---
+  Future<void> replyReview(int reviewId, String replyText) async {
+    String? token = await _getToken();
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}/reviews/$reviewId/reply'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: {'reply': replyText},
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200) {
+        final responseData = json.decode(response.body);
+        throw Exception(responseData['message'] ?? 'Gagal membalas ulasan');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
 }

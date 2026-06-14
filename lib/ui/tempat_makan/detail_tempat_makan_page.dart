@@ -4,9 +4,12 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/tempat_makan_model.dart';
 import '../../models/review_model.dart';
 import '../../models/photo_model.dart';
+import '../../models/user_model.dart';
+import '../../services/auth_service.dart';
 import '../../services/review_service.dart';
 import '../../services/photo_service.dart';
 import '../../utils/constants.dart';
+import '../../services/favorite_service.dart';
 
 class DetailTempatMakanPage extends StatefulWidget {
   final TempatMakanModel tempatMakan;
@@ -19,11 +22,50 @@ class DetailTempatMakanPage extends StatefulWidget {
 class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
   late Future<List<ReviewModel>> _reviewsFuture;
   late Future<List<PhotoModel>> _photosFuture;
+  UserModel? _currentUser;
+  bool _isFavorite = false;
+  bool _isLoadingFavorite = false;
 
   @override
   void initState() {
     super.initState();
     _fetchData();
+    _checkCurrentUser();
+    _checkFavoriteStatus();
+  }
+
+  void _checkFavoriteStatus() async {
+    final status = await FavoriteService().checkFavorite(widget.tempatMakan.id);
+    if (mounted) setState(() => _isFavorite = status);
+  }
+
+  void _toggleFavorite() async {
+    if (_isLoadingFavorite) return;
+    setState(() => _isLoadingFavorite = true);
+    try {
+      final newStatus = await FavoriteService().toggleFavorite(
+        widget.tempatMakan.id,
+      );
+      if (mounted) {
+        setState(() => _isFavorite = newStatus);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              newStatus
+                  ? "Ditambahkan ke Favorit ❤️"
+                  : "Dihapus dari Favorit 💔",
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+    } finally {
+      if (mounted) setState(() => _isLoadingFavorite = false);
+    }
   }
 
   void _fetchData() {
@@ -33,7 +75,18 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
     });
   }
 
-  // --- MODAL REVIEW + UPLOAD FOTO ---
+  void _checkCurrentUser() async {
+    final user = await AuthService().getCurrentUser();
+    if (mounted) setState(() => _currentUser = user);
+  }
+
+  String _buildImageUrl(String imagePath) {
+    String rootUrl = ApiConfig.baseUrl.replaceAll('/api', '');
+    return '$rootUrl/storage/$imagePath';
+  }
+
+  // --- MODAL REVIEW + UPLOAD FOTO (Untuk User) ---
+  // (Kodenya sama persis seperti sebelumnya, saya persingkat di sini agar muat)
   void _showAddReviewModal() {
     int selectedRating = 5;
     final commentCtrl = TextEditingController();
@@ -48,7 +101,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
       ),
       builder: (ctx) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
+          builder: (context, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom,
@@ -66,12 +119,11 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-
-                  // Bintang
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(5, (index) {
-                      return IconButton(
+                    children: List.generate(
+                      5,
+                      (index) => IconButton(
                         icon: Icon(
                           index < selectedRating
                               ? Icons.star
@@ -81,12 +133,10 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                         ),
                         onPressed: () =>
                             setModalState(() => selectedRating = index + 1),
-                      );
-                    }),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Form Komentar
                   TextField(
                     controller: commentCtrl,
                     maxLines: 3,
@@ -96,20 +146,17 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // --- KOTAK PEMILIH FOTO ---
                   GestureDetector(
                     onTap: () async {
                       final picker = ImagePicker();
                       final pickedFile = await picker.pickImage(
                         source: ImageSource.gallery,
-                        imageQuality: 70,
+                        imageQuality: 50,
                       );
-                      if (pickedFile != null) {
+                      if (pickedFile != null)
                         setModalState(
                           () => selectedImage = File(pickedFile.path),
                         );
-                      }
                     },
                     child: Container(
                       height: 120,
@@ -145,8 +192,6 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Tombol Kirim
                   isSubmitting
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(
@@ -162,7 +207,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                 widget.tempatMakan.id,
                                 selectedRating,
                                 commentCtrl.text.trim(),
-                                imageFile: selectedImage, // Kirim foto jika ada
+                                imageFile: selectedImage,
                               );
                               if (mounted) {
                                 Navigator.pop(ctx);
@@ -172,10 +217,10 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                     backgroundColor: Colors.green,
                                   ),
                                 );
-                                _fetchData(); // Refresh UI Review dan Galeri sekaligus!
+                                _fetchData();
                               }
                             } catch (e) {
-                              if (mounted) {
+                              if (mounted)
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
@@ -187,7 +232,6 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                     backgroundColor: Colors.red,
                                   ),
                                 );
-                              }
                             } finally {
                               if (mounted)
                                 setModalState(() => isSubmitting = false);
@@ -211,45 +255,158 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
     );
   }
 
-  String _buildImageUrl(String imagePath) {
-    String rootUrl = ApiConfig.baseUrl.replaceAll('/api', '');
-    return '$rootUrl/storage/$imagePath';
+  // --- MODAL BALAS REVIEW (KHUSUS OWNER) ---
+  void _showReplyModal(ReviewModel review) {
+    final replyCtrl = TextEditingController(text: review.reply ?? '');
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                left: 16,
+                right: 16,
+                top: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    "Balas Ulasan Pelanggan",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '"${review.comment}"',
+                      style: const TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: replyCtrl,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: "Tulis balasan Anda sebagai Pemilik",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  isSubmitting
+                      ? const Center(child: CircularProgressIndicator())
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green[700],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          onPressed: () async {
+                            if (replyCtrl.text.isEmpty) return;
+                            setModalState(() => isSubmitting = true);
+                            try {
+                              await ReviewService().replyReview(
+                                review.id,
+                                replyCtrl.text.trim(),
+                              );
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Berhasil membalas ulasan!"),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                _fetchData();
+                              }
+                            } catch (e) {
+                              if (mounted)
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      e.toString().replaceAll(
+                                        "Exception: ",
+                                        "",
+                                      ),
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                            } finally {
+                              if (mounted)
+                                setModalState(() => isSubmitting = false);
+                            }
+                          },
+                          child: const Text(
+                            "Kirim Balasan",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Cek apakah yang login adalah pemilik warung ini
+    bool isOwnerOfThisPlace =
+        _currentUser != null && _currentUser!.id == widget.tempatMakan.userId;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.tempatMakan.name),
-        backgroundColor: Colors.orange,
+        backgroundColor: isOwnerOfThisPlace ? Colors.green[800] : Colors.orange,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            FutureBuilder<List<PhotoModel>>(
-              future: _photosFuture,
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                  return Image.network(
-                    _buildImageUrl(snapshot.data!.first.imagePath),
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  );
-                }
-                return Container(
-                  height: 200,
-                  color: Colors.orange[200],
-                  child: const Icon(
-                    Icons.restaurant,
-                    size: 80,
-                    color: Colors.white,
-                  ),
-                );
-              },
-            ),
+            // --- FOTO SAMPUL UTAMA (Dari Database) ---
+            if (widget.tempatMakan.imagePath != null &&
+                widget.tempatMakan.imagePath!.isNotEmpty)
+              Image.network(
+                _buildImageUrl(widget.tempatMakan.imagePath!),
+                height: 220,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              )
+            else
+              Container(
+                height: 220,
+                color: Colors.grey[300],
+                child: const Icon(
+                  Icons.storefront,
+                  size: 80,
+                  color: Colors.grey,
+                ),
+              ),
 
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -312,7 +469,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
 
                   const Divider(height: 32, thickness: 1),
 
-                  // --- SEKSI GALERI FOTO ---
+                  // --- GALERI FOTO ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -323,18 +480,18 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      // Tombol Tambah Galeri sekarang langsung memanggil modal review
-                      TextButton.icon(
-                        onPressed: _showAddReviewModal,
-                        icon: const Icon(
-                          Icons.rate_review,
-                          color: Colors.orange,
+                      if (!isOwnerOfThisPlace) // Cuma User yang disuruh nambah review+foto galeri
+                        TextButton.icon(
+                          onPressed: _showAddReviewModal,
+                          icon: const Icon(
+                            Icons.add_a_photo,
+                            color: Colors.orange,
+                          ),
+                          label: const Text(
+                            "Tambah Foto",
+                            style: TextStyle(color: Colors.orange),
+                          ),
                         ),
-                        label: const Text(
-                          "Tulis Ulasan & Foto",
-                          style: TextStyle(color: Colors.orange),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -344,29 +501,24 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                       if (snapshot.connectionState == ConnectionState.waiting)
                         return const Center(child: CircularProgressIndicator());
                       if (!snapshot.hasData || snapshot.data!.isEmpty)
-                        return const Text("Belum ada foto.");
-
+                        return const Text("Belum ada foto galeri.");
                       return SizedBox(
                         height: 100,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: snapshot.data!.length,
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  _buildImageUrl(
-                                    snapshot.data![index].imagePath,
-                                  ),
-                                  width: 100,
-                                  height: 100,
-                                  fit: BoxFit.cover,
-                                ),
+                          itemBuilder: (context, index) => Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                _buildImageUrl(snapshot.data![index].imagePath),
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
                               ),
-                            );
-                          },
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -374,7 +526,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
 
                   const Divider(height: 48, thickness: 1),
 
-                  // --- SEKSI ULASAN (DENGAN GAMBAR) ---
+                  // --- SEKSI ULASAN ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -385,14 +537,17 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      ElevatedButton(
-                        onPressed: _showAddReviewModal,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
+                      if (!isOwnerOfThisPlace &&
+                          _currentUser?.role ==
+                              'user') // Cuma User yang bisa ngasih review
+                        ElevatedButton(
+                          onPressed: _showAddReviewModal,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text("Beri Ulasan"),
                         ),
-                        child: const Text("Beri Ulasan"),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -431,15 +586,16 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                         ),
                                       ),
                                       Row(
-                                        children: List.generate(5, (starIndex) {
-                                          return Icon(
+                                        children: List.generate(
+                                          5,
+                                          (starIndex) => Icon(
                                             starIndex < review.rating
                                                 ? Icons.star
                                                 : Icons.star_border,
                                             size: 16,
                                             color: Colors.amber,
-                                          );
-                                        }),
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -453,8 +609,6 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                       ),
                                     ),
                                   ],
-
-                                  // --- MUNCULKAN FOTO DI DALAM REVIEW JIKA ADA ---
                                   if (review.imagePath != null &&
                                       review.imagePath!.isNotEmpty) ...[
                                     const SizedBox(height: 12),
@@ -465,6 +619,73 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                         height: 150,
                                         width: double.infinity,
                                         fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ],
+
+                                  // --- BALASAN DARI OWNER MUNCUL DI SINI ---
+                                  if (review.reply != null &&
+                                      review.reply!.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[50],
+                                        border: Border(
+                                          left: BorderSide(
+                                            color: Colors.green[700]!,
+                                            width: 4,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Balasan Pemilik:",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green[800],
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            review.reply!,
+                                            style: const TextStyle(
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+
+                                  // --- TOMBOL BALAS (KHUSUS OWNER) ---
+                                  if (isOwnerOfThisPlace) ...[
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton.icon(
+                                        onPressed: () =>
+                                            _showReplyModal(review),
+                                        icon: Icon(
+                                          review.reply == null
+                                              ? Icons.reply
+                                              : Icons.edit,
+                                          color: Colors.green[700],
+                                          size: 18,
+                                        ),
+                                        label: Text(
+                                          review.reply == null
+                                              ? "Balas"
+                                              : "Edit Balasan",
+                                          style: TextStyle(
+                                            color: Colors.green[700],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ],

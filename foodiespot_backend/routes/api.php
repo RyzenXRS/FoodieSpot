@@ -8,6 +8,7 @@ use App\Http\Controllers\API\ReviewController;
 use App\Http\Controllers\API\PhotoController; 
 use App\Http\Controllers\API\PengajuanOwnerController;
 use App\Http\Controllers\API\AdminController;
+use App\Http\Controllers\API\FavoriteController; 
 
 // Route yang bebas diakses tanpa token (Publik)
 Route::post('/register', [AuthController::class, 'register']);
@@ -45,4 +46,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/pengajuan/{id}/reject', [AdminController::class, 'tolakPengajuan']);
 
     Route::get('/owner/tempat-makan', [App\Http\Controllers\API\TempatMakanController::class, 'myTempatMakan']);
+    Route::post('/reviews/{id}/reply', [App\Http\Controllers\API\ReviewController::class, 'reply']);
+
+
+    // --- ROUTE FAVORIT ---
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::get('/tempat-makan/{id}/favorite', [FavoriteController::class, 'check']);
+    Route::post('/tempat-makan/{id}/favorite', [FavoriteController::class, 'toggle']);
 });
