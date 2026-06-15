@@ -11,23 +11,28 @@ class TempatMakanService {
     return prefs.getString('token');
   }
 
-  Future<List<TempatMakanModel>> getTempatMakan() async {
+  Future<List<TempatMakanModel>> getTempatMakan({String search = ''}) async {
     String? token = await _getToken();
     try {
+      // Tambahkan parameter ?search= ke dalam URL jika ada kata kunci
+      final uri = Uri.parse('${ApiConfig.baseUrl}/tempat-makan?search=$search');
+
       final response = await http
           .get(
-            Uri.parse('${ApiConfig.baseUrl}/tempat-makan'),
+            uri,
             headers: {
               'Accept': 'application/json',
               'Authorization': 'Bearer $token',
             },
           )
           .timeout(const Duration(seconds: 15));
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body)['data'] as List;
         return data.map((item) => TempatMakanModel.fromJson(item)).toList();
+      } else {
+        throw Exception('Gagal memuat tempat makan');
       }
-      throw Exception('Gagal memuat tempat makan');
     } catch (e) {
       throw Exception('Kesalahan jaringan: $e');
     }

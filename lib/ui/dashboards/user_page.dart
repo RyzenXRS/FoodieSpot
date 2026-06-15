@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/auth_service.dart';
 import '../../services/tempat_makan_service.dart';
 import '../../services/pengajuan_owner.dart';
@@ -7,8 +9,8 @@ import '../../models/user_model.dart';
 import '../../models/pengajuan_owner_model.dart';
 import '../profile/profile_page.dart';
 import '../tempat_makan/detail_tempat_makan_page.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
+import '../dashboards/favorite_page.dart';
+import '../../utils/constants.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -22,6 +24,10 @@ class _UserHomePageState extends State<UserHomePage> {
   PengajuanOwnerModel? _pengajuan;
   bool _isLoadingPengajuan = true;
 
+  // --- Variabel untuk Fitur Pencarian ---
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -29,9 +35,20 @@ class _UserHomePageState extends State<UserHomePage> {
     _fetchStatusPengajuan();
   }
 
+  // --- Fungsi mengambil data dengan parameter pencarian ---
   void _fetchData() {
     setState(() {
-      _tempatMakanFuture = TempatMakanService().getTempatMakan();
+      _tempatMakanFuture = TempatMakanService().getTempatMakan(
+        search: _searchQuery,
+      );
+    });
+  }
+
+  // Fungsi saat tombol "Cari" di keyboard ditekan
+  void _onSearchSubmit(String query) {
+    setState(() {
+      _searchQuery = query;
+      _fetchData();
     });
   }
 
@@ -47,7 +64,12 @@ class _UserHomePageState extends State<UserHomePage> {
     }
   }
 
-  // --- MODAL PENGAJUAN (Bisa untuk Daftar & Lihat Status) ---
+  String _buildImageUrl(String imagePath) {
+    String rootUrl = ApiConfig.baseUrl.replaceAll('/api', '');
+    return '$rootUrl/storage/$imagePath';
+  }
+
+  // --- MODAL PENGAJUAN OWNER (Sama seperti sebelumnya) ---
   void _showMitraModal() {
     final namaTokoCtrl = TextEditingController();
     final deskripsiTokoCtrl = TextEditingController();
@@ -111,8 +133,6 @@ class _UserHomePageState extends State<UserHomePage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // --- AREA UPLOAD KTP ---
                     const Text(
                       "Upload Kartu Identitas (KTP)",
                       style: TextStyle(fontWeight: FontWeight.bold),
@@ -123,14 +143,12 @@ class _UserHomePageState extends State<UserHomePage> {
                         final picker = ImagePicker();
                         final pickedFile = await picker.pickImage(
                           source: ImageSource.gallery,
-                          imageQuality:
-                              30, // Kualitas diturunkan agar file KTP tidak sampai 2MB
+                          imageQuality: 30,
                         );
-                        if (pickedFile != null) {
+                        if (pickedFile != null)
                           setModalState(
                             () => selectedKtp = File(pickedFile.path),
                           );
-                        }
                       },
                       child: Container(
                         height: 120,
@@ -166,7 +184,6 @@ class _UserHomePageState extends State<UserHomePage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
                     isSubmitting
                         ? const Center(child: CircularProgressIndicator())
                         : ElevatedButton(
@@ -198,7 +215,6 @@ class _UserHomePageState extends State<UserHomePage> {
                                 );
                                 return;
                               }
-
                               setModalState(() => isSubmitting = true);
                               try {
                                 await PengajuanOwnerService().ajukan(
@@ -208,9 +224,7 @@ class _UserHomePageState extends State<UserHomePage> {
                                   selectedKtp!,
                                 );
                                 if (mounted) {
-                                  Navigator.pop(
-                                    ctx,
-                                  ); // Tutup pop-up jika sukses
+                                  Navigator.pop(ctx);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
@@ -219,7 +233,7 @@ class _UserHomePageState extends State<UserHomePage> {
                                       backgroundColor: Colors.green,
                                     ),
                                   );
-                                  _fetchStatusPengajuan(); // Segarkan tombol di AppBar
+                                  _fetchStatusPengajuan();
                                 }
                               } catch (e) {
                                 if (mounted) {
@@ -234,7 +248,6 @@ class _UserHomePageState extends State<UserHomePage> {
                                       backgroundColor: Colors.red,
                                     ),
                                   );
-                                  // Matikan loading HANYA saat terjadi error
                                   setModalState(() => isSubmitting = false);
                                 }
                               }
@@ -248,7 +261,6 @@ class _UserHomePageState extends State<UserHomePage> {
                             ),
                           ),
                   ] else ...[
-                    // --- BAGIAN STATUS PENDING ---
                     const Icon(
                       Icons.access_time_filled,
                       color: Colors.blue,
@@ -279,9 +291,7 @@ class _UserHomePageState extends State<UserHomePage> {
                               try {
                                 await PengajuanOwnerService().batalkan();
                                 if (mounted) {
-                                  Navigator.pop(
-                                    ctx,
-                                  ); // Tutup pop-up jika sukses dibatalkan
+                                  Navigator.pop(ctx);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text("Pengajuan dibatalkan"),
@@ -303,7 +313,6 @@ class _UserHomePageState extends State<UserHomePage> {
                                       backgroundColor: Colors.red,
                                     ),
                                   );
-                                  // Matikan loading HANYA saat terjadi error
                                   setModalState(() => isSubmitting = false);
                                 }
                               }
@@ -334,7 +343,6 @@ class _UserHomePageState extends State<UserHomePage> {
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
         actions: [
-          // --- TOMBOL JADI MITRA / PENDING ---
           if (!_isLoadingPengajuan)
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -366,135 +374,208 @@ class _UserHomePageState extends State<UserHomePage> {
                 ),
               ),
             ),
-
-          // --- TOMBOL PROFIL ---
+          IconButton(
+            icon: const Icon(Icons.favorite, color: Colors.pink, size: 28),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FavoritePage()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.account_circle, size: 28),
             onPressed: () async {
               UserModel? currentUser = await AuthService().getCurrentUser();
-              if (currentUser != null && context.mounted) {
+              if (currentUser != null && context.mounted)
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => ProfilePage(user: currentUser),
                   ),
                 );
-              }
             },
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: FutureBuilder<List<TempatMakanModel>>(
-        future: _tempatMakanFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("Gagal memuat data: ${snapshot.error}"));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text("Belum ada tempat makan."));
-          }
+      body: Column(
+        children: [
+          // --- KOTAK PENCARIAN (SEARCH BAR) ---
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.orange,
+            child: TextField(
+              controller: _searchCtrl,
+              onSubmitted: _onSearchSubmit,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: "Cari nasi goreng, seblak, lokasi...",
+                filled: true,
+                fillColor: Colors.white,
+                prefixIcon: const Icon(Icons.search, color: Colors.orange),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          _onSearchSubmit(''); // Kosongkan pencarian
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
 
-          final listTempat = snapshot.data!;
-
-          return RefreshIndicator(
-            onRefresh: () async => _fetchData(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: listTempat.length,
-              itemBuilder: (context, index) {
-                final item = listTempat[index];
-                return Card(
-                  elevation: 3,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              DetailTempatMakanPage(tempatMakan: item),
-                        ),
-                      );
-                    },
+          // --- LIST WARUNG ---
+          Expanded(
+            child: FutureBuilder<List<TempatMakanModel>>(
+              future: _tempatMakanFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  return const Center(child: CircularProgressIndicator());
+                if (snapshot.hasError)
+                  return Center(
+                    child: Text("Gagal memuat data: ${snapshot.error}"),
+                  );
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          height: 140,
-                          width: double.infinity,
-                          color: Colors.orange[200],
-                          child: const Icon(
-                            Icons.fastfood,
-                            size: 50,
-                            color: Colors.white,
-                          ),
+                        Icon(
+                          Icons.search_off,
+                          size: 80,
+                          color: Colors.grey[400],
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.name,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    size: 16,
-                                    color: Colors.amber,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    item.rating.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.location_on,
-                                    size: 16,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      item.address,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchQuery.isEmpty
+                              ? "Belum ada tempat makan."
+                              : "Warung tidak ditemukan.",
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey,
                           ),
                         ),
                       ],
                     ),
+                  );
+                }
+
+                final listTempat = snapshot.data!;
+                return RefreshIndicator(
+                  onRefresh: () async => _fetchData(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: listTempat.length,
+                    itemBuilder: (context, index) {
+                      final item = listTempat[index];
+                      return Card(
+                        elevation: 3,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    DetailTempatMakanPage(tempatMakan: item),
+                              ),
+                            );
+                            _fetchData(); // Refresh rating saat kembali
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (item.imagePath != null &&
+                                  item.imagePath!.isNotEmpty)
+                                Image.network(
+                                  _buildImageUrl(item.imagePath!),
+                                  height: 160,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                )
+                              else
+                                Container(
+                                  height: 140,
+                                  width: double.infinity,
+                                  color: Colors.orange[200],
+                                  child: const Icon(
+                                    Icons.fastfood,
+                                    size: 50,
+                                    color: Colors.white,
+                                  ),
+                                ),
+
+                              Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.name,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          size: 16,
+                                          color: Colors.amber,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          item.rating.toStringAsFixed(1),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.location_on,
+                                          size: 16,
+                                          color: Colors.grey,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            item.address,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

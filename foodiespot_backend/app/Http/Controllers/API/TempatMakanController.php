@@ -9,14 +9,23 @@ use Illuminate\Support\Facades\Validator;
 
 class TempatMakanController extends Controller
 {
-    // --- 1. READ (Lihat Semua Data - Untuk Beranda Aplikasi) ---
+    // --- 1. READ (Lihat Semua Data + Fitur Pencarian) ---
     public function index(Request $request)
     {
-        // Menampilkan SEMUA tempat makan agar User dan Owner bisa melihat-lihat
-        $tempatMakan = TempatMakan::latest()->get();
+        $query = TempatMakan::latest();
+
+        // Jika ada request pencarian (?search=nama_warung)
+        if ($request->has('search') && $request->search != '') {
+            $keyword = $request->search;
+            $query->where('name', 'like', '%' . $keyword . '%')
+                  ->orWhere('address', 'like', '%' . $keyword . '%')
+                  ->orWhere('description', 'like', '%' . $keyword . '%');
+        }
+
+        $tempatMakan = $query->get();
 
         return response()->json([
-            'status' => 'success',
+            'status' => 'success', 
             'data' => $tempatMakan
         ], 200);
     }

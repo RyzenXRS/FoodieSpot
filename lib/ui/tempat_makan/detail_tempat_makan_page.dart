@@ -8,8 +8,8 @@ import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/review_service.dart';
 import '../../services/photo_service.dart';
-import '../../utils/constants.dart';
 import '../../services/favorite_service.dart';
+import '../../utils/constants.dart';
 
 class DetailTempatMakanPage extends StatefulWidget {
   final TempatMakanModel tempatMakan;
@@ -23,6 +23,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
   late Future<List<ReviewModel>> _reviewsFuture;
   late Future<List<PhotoModel>> _photosFuture;
   UserModel? _currentUser;
+
+  // Variabel untuk fitur Favorit
   bool _isFavorite = false;
   bool _isLoadingFavorite = false;
 
@@ -34,11 +36,25 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
     _checkFavoriteStatus();
   }
 
+  // --- FUNGSI AMBIL DATA ---
+  void _fetchData() {
+    setState(() {
+      _reviewsFuture = ReviewService().getReviews(widget.tempatMakan.id);
+      _photosFuture = PhotoService().getPhotos(widget.tempatMakan.id);
+    });
+  }
+
+  void _checkCurrentUser() async {
+    final user = await AuthService().getCurrentUser();
+    if (mounted) setState(() => _currentUser = user);
+  }
+
   void _checkFavoriteStatus() async {
     final status = await FavoriteService().checkFavorite(widget.tempatMakan.id);
     if (mounted) setState(() => _isFavorite = status);
   }
 
+  // --- FUNGSI TOGGLE FAVORIT (KLIK LOVE) ---
   void _toggleFavorite() async {
     if (_isLoadingFavorite) return;
     setState(() => _isLoadingFavorite = true);
@@ -55,6 +71,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                   ? "Ditambahkan ke Favorit ❤️"
                   : "Dihapus dari Favorit 💔",
             ),
+            backgroundColor: newStatus ? Colors.pink : Colors.grey,
           ),
         );
       }
@@ -68,25 +85,13 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
     }
   }
 
-  void _fetchData() {
-    setState(() {
-      _reviewsFuture = ReviewService().getReviews(widget.tempatMakan.id);
-      _photosFuture = PhotoService().getPhotos(widget.tempatMakan.id);
-    });
-  }
-
-  void _checkCurrentUser() async {
-    final user = await AuthService().getCurrentUser();
-    if (mounted) setState(() => _currentUser = user);
-  }
-
+  // --- FUNGSI MEMBACA URL GAMBAR DARI LARAVEL ---
   String _buildImageUrl(String imagePath) {
     String rootUrl = ApiConfig.baseUrl.replaceAll('/api', '');
     return '$rootUrl/storage/$imagePath';
   }
 
-  // --- MODAL REVIEW + UPLOAD FOTO (Untuk User) ---
-  // (Kodenya sama persis seperti sebelumnya, saya persingkat di sini agar muat)
+  // --- MODAL TAMBAH REVIEW (UNTUK USER) ---
   void _showAddReviewModal() {
     int selectedRating = 5;
     final commentCtrl = TextEditingController();
@@ -119,6 +124,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
+
+                  // Bintang Penilaian
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
@@ -137,6 +144,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Kolom Komentar
                   TextField(
                     controller: commentCtrl,
                     maxLines: 3,
@@ -146,6 +155,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Upload Foto Review
                   GestureDetector(
                     onTap: () async {
                       final picker = ImagePicker();
@@ -192,6 +203,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // Tombol Kirim
                   isSubmitting
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(
@@ -217,7 +230,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                     backgroundColor: Colors.green,
                                   ),
                                 );
-                                _fetchData();
+                                _fetchData(); // Refresh ulasan dan galeri
                               }
                             } catch (e) {
                               if (mounted)
@@ -286,6 +299,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
+
+                  // Menampilkan Komentar Asli
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -301,6 +316,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Input Balasan
                   TextField(
                     controller: replyCtrl,
                     maxLines: 4,
@@ -310,6 +327,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // Tombol Kirim Balasan
                   isSubmitting
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(
@@ -334,7 +353,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                     backgroundColor: Colors.green,
                                   ),
                                 );
-                                _fetchData();
+                                _fetchData(); // Refresh UI ulasan
                               }
                             } catch (e) {
                               if (mounted)
@@ -374,21 +393,42 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Cek apakah yang login adalah pemilik warung ini
+    // Mengecek apakah yang sedang login adalah Pemilik Warung ini
     bool isOwnerOfThisPlace =
         _currentUser != null && _currentUser!.id == widget.tempatMakan.userId;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.tempatMakan.name),
+        // Warna AppBar Hijau untuk Owner, Orange untuk User
         backgroundColor: isOwnerOfThisPlace ? Colors.green[800] : Colors.orange,
         foregroundColor: Colors.white,
+        actions: [
+          // --- TOMBOL LOVE FAVORIT (HANYA UNTUK USER) ---
+          if (_currentUser?.role == 'user')
+            IconButton(
+              icon: _isLoadingFavorite
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Icon(
+                      _isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: _isFavorite ? Colors.pink : Colors.white,
+                    ),
+              onPressed: _toggleFavorite,
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- FOTO SAMPUL UTAMA (Dari Database) ---
+            // --- FOTO BAMPUL UTAMA (BANNER) ---
             if (widget.tempatMakan.imagePath != null &&
                 widget.tempatMakan.imagePath!.isNotEmpty)
               Image.network(
@@ -413,6 +453,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Nama & Rating
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -440,6 +481,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
+
+                  // Alamat
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -457,6 +500,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ],
                   ),
                   const Divider(height: 32, thickness: 1),
+
+                  // Deskripsi
                   const Text(
                     "Tentang Tempat Ini",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -469,7 +514,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
 
                   const Divider(height: 32, thickness: 1),
 
-                  // --- GALERI FOTO ---
+                  // --- GALERI FOTO (DIAMBIL DARI FOTO REVIEW/PHOTO) ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -480,9 +525,10 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (!isOwnerOfThisPlace) // Cuma User yang disuruh nambah review+foto galeri
+                      if (!isOwnerOfThisPlace && _currentUser?.role == 'user')
                         TextButton.icon(
-                          onPressed: _showAddReviewModal,
+                          onPressed:
+                              _showAddReviewModal, // Arahkan ke review agar mereka sekalian isi ulasan
                           icon: const Icon(
                             Icons.add_a_photo,
                             color: Colors.orange,
@@ -526,7 +572,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
 
                   const Divider(height: 48, thickness: 1),
 
-                  // --- SEKSI ULASAN ---
+                  // --- SEKSI ULASAN & KOMENTAR ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -537,9 +583,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (!isOwnerOfThisPlace &&
-                          _currentUser?.role ==
-                              'user') // Cuma User yang bisa ngasih review
+                      if (!isOwnerOfThisPlace && _currentUser?.role == 'user')
                         ElevatedButton(
                           onPressed: _showAddReviewModal,
                           style: ElevatedButton.styleFrom(
@@ -551,13 +595,18 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
+
                   FutureBuilder<List<ReviewModel>>(
                     future: _reviewsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting)
                         return const Center(child: CircularProgressIndicator());
                       if (!snapshot.hasData || snapshot.data!.isEmpty)
-                        return const Center(child: Text("Belum ada ulasan."));
+                        return const Center(
+                          child: Text(
+                            "Belum ada ulasan. Jadilah yang pertama!",
+                          ),
+                        );
 
                       final listReview = snapshot.data!;
                       return ListView.builder(
@@ -574,6 +623,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // Nama dan Bintang User
                                   Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
@@ -599,6 +649,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                       ),
                                     ],
                                   ),
+
+                                  // Teks Komentar User
                                   if (review.comment.isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     Text(
@@ -609,6 +661,8 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                       ),
                                     ),
                                   ],
+
+                                  // Foto Review User
                                   if (review.imagePath != null &&
                                       review.imagePath!.isNotEmpty) ...[
                                     const SizedBox(height: 12),
@@ -623,7 +677,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                     ),
                                   ],
 
-                                  // --- BALASAN DARI OWNER MUNCUL DI SINI ---
+                                  // --- KOTAK BALASAN OWNER ---
                                   if (review.reply != null &&
                                       review.reply!.isNotEmpty) ...[
                                     const SizedBox(height: 12),
@@ -663,7 +717,7 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                     ),
                                   ],
 
-                                  // --- TOMBOL BALAS (KHUSUS OWNER) ---
+                                  // --- TOMBOL BALAS (HANYA MUNCUL JIKA YG LOGIN ADALAH OWNER WARUNG INI) ---
                                   if (isOwnerOfThisPlace) ...[
                                     const SizedBox(height: 8),
                                     Align(

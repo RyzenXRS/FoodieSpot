@@ -4,8 +4,8 @@ import '../../services/tempat_makan_service.dart';
 import '../../models/tempat_makan_model.dart';
 import '../splash/role_checker.dart';
 import '../tempat_makan/add_tempat_makan_page.dart';
-import '../tempat_makan/edit_tempat_makan_page.dart'; // <-- IMPORT BARU
-import '../tempat_makan/detail_tempat_makan_page.dart'; // <-- IMPORT BARU
+import '../tempat_makan/edit_tempat_makan_page.dart';
+import '../tempat_makan/detail_tempat_makan_page.dart';
 
 class OwnerHomePage extends StatefulWidget {
   const OwnerHomePage({super.key});
