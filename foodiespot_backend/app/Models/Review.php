@@ -18,6 +18,19 @@ class Review extends Model
         'reply',
     ];
 
+    // Otomatis tambahkan full URL gambar ke response JSON
+    protected $appends = ['image_url'];
+
+    /**
+     * Accessor: Ubah image_path menjadi full URL.
+     * Jika tidak ada gambar, return null.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if (!$this->image_path) return null;
+        return asset('storage/' . $this->image_path);
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

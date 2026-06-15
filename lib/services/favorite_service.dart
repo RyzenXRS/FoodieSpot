@@ -27,10 +27,11 @@ class FavoriteService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body)['data'] as List;
         return data.map((item) => TempatMakanModel.fromJson(item)).toList();
+      } else {
+        throw Exception('Error ${response.statusCode}: ${response.body}');
       }
-      throw Exception('Gagal memuat daftar favorit');
     } catch (e) {
-      throw Exception('Kesalahan jaringan: $e');
+      throw Exception(e.toString());
     }
   }
 
