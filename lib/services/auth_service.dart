@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -87,24 +88,38 @@ class AuthService {
     debugPrint("DEBUG LOGOUT: Sesi lokal berhasil dibersihkan.");
   }
 
-  // --- FUNGSI UPDATE PROFIL ---
+  // --- FUNGSI UPDATE PROFIL (mendukung upload foto) ---
   Future<UserModel> updateProfile({
     required String name,
     required String phone,
+    File? photoFile,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
 
     try {
-      final response = await http.put(
-        Uri.parse('${ApiConfig.baseUrl}/profile'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-        body: {'name': name, 'phone': phone},
+      // Pakai multipart POST agar bisa kirim file foto sekaligus
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConfig.baseUrl}/profile/update'),
       );
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+      request.fields['name'] = name;
+      request.fields['phone'] = phone;
 
+      if (photoFile != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('photo', photoFile.path),
+        );
+      }
+
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 20),
+      );
+      final response = await http.Response.fromStream(streamedResponse);
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 200 && responseData['status'] == 'success') {
