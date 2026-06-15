@@ -49,6 +49,8 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await AuthService().loginUser(_emailCtrl.text.trim(), _passwordCtrl.text);
 
+      if (!mounted) return;
+
       // Letakkan ini setelah notifikasi sukses dimunculkan
       Navigator.pushAndRemoveUntil(
         context,

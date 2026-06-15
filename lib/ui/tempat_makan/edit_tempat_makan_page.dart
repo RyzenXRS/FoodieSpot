@@ -28,9 +28,10 @@ class _EditTempatMakanPageState extends State<EditTempatMakanPage> {
     _descCtrl = TextEditingController(text: widget.tempatMakan.description);
   }
 
-  String _buildImageUrl(String imagePath) {
+  String _resolveImageUrl(String url) {
+    if (url.startsWith('http')) return url;
     String rootUrl = ApiConfig.baseUrl.replaceAll('/api', '');
-    return '$rootUrl/storage/$imagePath';
+    return '$rootUrl/storage/$url';
   }
 
   void _simpanEdit() async {
@@ -121,14 +122,22 @@ class _EditTempatMakanPageState extends State<EditTempatMakanPage> {
                           fit: BoxFit.cover,
                         ),
                       )
-                    : (widget.tempatMakan.imagePath != null &&
-                          widget.tempatMakan.imagePath!.isNotEmpty)
+                    : (widget.tempatMakan.imageUrl != null &&
+                          widget.tempatMakan.imageUrl!.isNotEmpty)
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: Image.network(
-                          _buildImageUrl(widget.tempatMakan.imagePath!),
+                          _resolveImageUrl(widget.tempatMakan.imageUrl!),
                           width: double.infinity,
                           fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, _) => const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.broken_image, color: Colors.grey, size: 40),
+                              SizedBox(height: 8),
+                              Text("Gagal memuat gambar", style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
                         ),
                       )
                     : const Column(

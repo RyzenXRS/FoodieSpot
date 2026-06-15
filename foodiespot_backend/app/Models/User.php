@@ -26,19 +26,20 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    // Otomatis tambahkan full URL foto profil ke response JSON
-    protected $appends = ['photo_full_url'];
-
     /**
-     * Accessor: Full URL foto profil user.
-     * Contoh hasil: http://10.0.2.2:8000/storage/profile_photos/abc.jpg
+     * Accessor: Override field photo_url agar SELALU return full URL.
+     * Ini memastikan Flutter selalu dapat URL yang bisa langsung ditampilkan,
+     * baik dari `$user->photo_url` maupun saat eager loading `with('user:id,name,photo_url')`.
+     *
+     * Contoh input (DB): "profile_photos/abc123.jpg"
+     * Contoh output    : "http://10.0.2.2:8000/storage/profile_photos/abc123.jpg"
      */
-    public function getPhotoFullUrlAttribute(): ?string
+    public function getPhotoUrlAttribute($value): ?string
     {
-        if (!$this->photo_url) return null;
-        // Jika sudah berupa URL penuh (dari social login, dll), kembalikan langsung
-        if (str_starts_with($this->photo_url, 'http')) return $this->photo_url;
-        return asset('storage/' . $this->photo_url);
+        if (!$value) return null;
+        // Jika sudah full URL (misal dari Google/Facebook login), kembalikan apa adanya
+        if (str_starts_with($value, 'http')) return $value;
+        return asset('storage/' . $value);
     }
 
     protected function casts(): array

@@ -22,24 +22,26 @@ class TempatMakan extends Model
         'rating',
     ];
 
-    // Otomatis tambahkan full URL cover dan flag maps ke response JSON
-    protected $appends = ['cover_url', 'maps_url'];
+    // Tambahkan maps_url ke setiap response JSON
+    protected $appends = ['maps_url'];
 
     /**
-     * Accessor: Full URL gambar cover tempat makan.
-     * Contoh hasil: http://10.0.2.2:8000/storage/tempat_makan_cover/abc.jpg
+     * Accessor: Override field image_url agar SELALU return full URL.
+     * Flutter baca field `image_url` → langsung dapat URL gambar yang bisa ditampilkan.
+     *
+     * Contoh input (DB): "tempat_makan_cover/abc123.jpg"
+     * Contoh output    : "http://10.0.2.2:8000/storage/tempat_makan_cover/abc123.jpg"
      */
-    public function getCoverUrlAttribute(): ?string
+    public function getImageUrlAttribute($value): ?string
     {
-        if (!$this->image_url) return null;
-        // Jika sudah berupa URL penuh (http...), kembalikan langsung
-        if (str_starts_with($this->image_url, 'http')) return $this->image_url;
-        return asset('storage/' . $this->image_url);
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        return asset('storage/' . $value);
     }
 
     /**
      * Accessor: URL Google Maps untuk navigasi langsung dari Flutter.
-     * Flutter tinggal buka URL ini dengan url_launcher → otomatis buka Google Maps.
+     * Flutter buka URL ini pakai url_launcher → otomatis buka Google Maps dengan navigasi.
      * Contoh: https://www.google.com/maps/dir/?api=1&destination=-6.200,106.816
      */
     public function getMapsUrlAttribute(): ?string

@@ -64,9 +64,10 @@ class _UserHomePageState extends State<UserHomePage> {
     }
   }
 
-  String _buildImageUrl(String imagePath) {
+  String _resolveImageUrl(String url) {
+    if (url.startsWith('http')) return url;
     String rootUrl = ApiConfig.baseUrl.replaceAll('/api', '');
-    return '$rootUrl/storage/$imagePath';
+    return '$rootUrl/storage/$url';
   }
 
   // --- MODAL PENGAJUAN OWNER (Sama seperti sebelumnya) ---
@@ -145,10 +146,11 @@ class _UserHomePageState extends State<UserHomePage> {
                           source: ImageSource.gallery,
                           imageQuality: 30,
                         );
-                        if (pickedFile != null)
+                        if (pickedFile != null) {
                           setModalState(
                             () => selectedKtp = File(pickedFile.path),
                           );
+                        }
                       },
                       child: Container(
                         height: 120,
@@ -223,33 +225,31 @@ class _UserHomePageState extends State<UserHomePage> {
                                   alamatCtrl.text.trim(),
                                   selectedKtp!,
                                 );
-                                if (mounted) {
-                                  Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Pengajuan beserta KTP berhasil dikirim!",
-                                      ),
-                                      backgroundColor: Colors.green,
+                                if (!ctx.mounted || !mounted) return;
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Pengajuan beserta KTP berhasil dikirim!",
                                     ),
-                                  );
-                                  _fetchStatusPengajuan();
-                                }
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                _fetchStatusPengajuan();
                               } catch (e) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        e.toString().replaceAll(
-                                          "Exception: ",
-                                          "",
-                                        ),
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      e.toString().replaceAll(
+                                        "Exception: ",
+                                        "",
                                       ),
-                                      backgroundColor: Colors.red,
                                     ),
-                                  );
-                                  setModalState(() => isSubmitting = false);
-                                }
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                setModalState(() => isSubmitting = false);
                               }
                             },
                             child: const Text(
@@ -290,31 +290,29 @@ class _UserHomePageState extends State<UserHomePage> {
                               setModalState(() => isSubmitting = true);
                               try {
                                 await PengajuanOwnerService().batalkan();
-                                if (mounted) {
-                                  Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Pengajuan dibatalkan"),
-                                      backgroundColor: Colors.orange,
-                                    ),
-                                  );
-                                  _fetchStatusPengajuan();
-                                }
+                                if (!ctx.mounted || !mounted) return;
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Pengajuan dibatalkan"),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                                _fetchStatusPengajuan();
                               } catch (e) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        e.toString().replaceAll(
-                                          "Exception: ",
-                                          "",
-                                        ),
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      e.toString().replaceAll(
+                                        "Exception: ",
+                                        "",
                                       ),
-                                      backgroundColor: Colors.red,
                                     ),
-                                  );
-                                  setModalState(() => isSubmitting = false);
-                                }
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                setModalState(() => isSubmitting = false);
                               }
                             },
                             style: OutlinedButton.styleFrom(
@@ -385,13 +383,15 @@ class _UserHomePageState extends State<UserHomePage> {
             icon: const Icon(Icons.account_circle, size: 28),
             onPressed: () async {
               UserModel? currentUser = await AuthService().getCurrentUser();
-              if (currentUser != null && context.mounted)
+              if (!context.mounted) return;
+              if (currentUser != null) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => ProfilePage(user: currentUser),
                   ),
                 );
+              }
             },
           ),
           const SizedBox(width: 8),
@@ -435,12 +435,14 @@ class _UserHomePageState extends State<UserHomePage> {
             child: FutureBuilder<List<TempatMakanModel>>(
               future: _tempatMakanFuture,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting)
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
-                if (snapshot.hasError)
+                }
+                if (snapshot.hasError) {
                   return Center(
                     child: Text("Gagal memuat data: ${snapshot.error}"),
                   );
+                }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return Center(
                     child: Column(
@@ -492,13 +494,23 @@ class _UserHomePageState extends State<UserHomePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (item.imagePath != null &&
-                                  item.imagePath!.isNotEmpty)
+                              if (item.imageUrl != null &&
+                                  item.imageUrl!.isNotEmpty)
                                 Image.network(
-                                  _buildImageUrl(item.imagePath!),
+                                  _resolveImageUrl(item.imageUrl!),
                                   height: 160,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
+                                  errorBuilder: (ctx, err, _) => Container(
+                                    height: 160,
+                                    width: double.infinity,
+                                    color: Colors.orange[200],
+                                    child: const Icon(
+                                      Icons.fastfood,
+                                      size: 50,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 )
                               else
                                 Container(

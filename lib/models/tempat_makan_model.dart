@@ -5,7 +5,10 @@ class TempatMakanModel {
   final String description;
   final String address;
   final double rating;
-  final String? imagePath;
+  final double? latitude;
+  final double? longitude;
+  final String? imageUrl; // Full URL dari backend (sudah include http://...)
+  final String? mapsUrl;  // Google Maps navigation URL
 
   TempatMakanModel({
     required this.id,
@@ -14,7 +17,10 @@ class TempatMakanModel {
     required this.description,
     required this.address,
     required this.rating,
-    this.imagePath,
+    this.latitude,
+    this.longitude,
+    this.imageUrl,
+    this.mapsUrl,
   });
 
   factory TempatMakanModel.fromJson(Map<String, dynamic> json) {
@@ -25,7 +31,11 @@ class TempatMakanModel {
       description: json['description'] ?? '',
       address: json['address'] ?? '',
       rating: (json['rating'] ?? 0).toDouble(),
-      imagePath: json['image_path'], // <-- TAMBAHKAN BARIS INI
+      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      // Backend sudah return full URL, langsung pakai
+      imageUrl: json['image_url'],
+      mapsUrl: json['maps_url'],
     );
   }
 }

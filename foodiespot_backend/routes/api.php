@@ -28,9 +28,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // ----------------------------------------------------------
     Route::post('/logout',   [AuthController::class, 'logout']);
     Route::get('/profile',   [AuthController::class, 'profile']);
-    Route::post('/profile',  [AuthController::class, 'updateProfile']); // POST karena multipart/form-data (upload foto)
-    Route::put('/profile',   [AuthController::class, 'updateProfile']); // PUT untuk kompatibilitas
-    Route::delete('/profile',[AuthController::class, 'deleteAccount']);
+    // PENTING: Untuk upload foto profil, Flutter WAJIB pakai POST (bukan PUT/PATCH)
+    // karena multipart/form-data file upload tidak support PUT di Laravel
+    Route::post('/profile/update', [AuthController::class, 'updateProfile']); // Recommended untuk upload foto
+    Route::post('/profile',        [AuthController::class, 'updateProfile']); // Fallback POST
+    Route::put('/profile',         [AuthController::class, 'updateProfile']); // Untuk update teks saja (tanpa file)
+    Route::patch('/profile',       [AuthController::class, 'updateProfile']); // Alternatif PUT
+    Route::delete('/profile',      [AuthController::class, 'deleteAccount']);
 
     // ----------------------------------------------------------
     // TEMPAT MAKAN

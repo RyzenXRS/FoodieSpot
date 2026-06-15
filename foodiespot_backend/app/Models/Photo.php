@@ -15,16 +15,17 @@ class Photo extends Model
         'image_path',
     ];
 
-    // Otomatis tambahkan full URL ke response JSON
+    // Tambahkan image_url (full URL) ke setiap response JSON
     protected $appends = ['image_url'];
 
     /**
-     * Accessor: Ubah image_path (path relatif) menjadi full URL yang bisa langsung dipakai Flutter.
-     * Contoh hasil: http://10.0.2.2:8000/storage/tempat_makan_photos/abc.jpg
+     * Accessor: Konversi image_path (raw path) ke full URL.
+     * Contoh output: "http://10.0.2.2:8000/storage/tempat_makan_photos/abc.jpg"
      */
     public function getImageUrlAttribute(): ?string
     {
         if (!$this->image_path) return null;
+        if (str_starts_with($this->image_path, 'http')) return $this->image_path;
         return asset('storage/' . $this->image_path);
     }
 

@@ -48,15 +48,18 @@ class _AddTempatMakanPageState extends State<AddTempatMakanPage> {
         );
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceAll("Exception: ", "")),
             backgroundColor: Colors.red,
           ),
         );
+      }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -86,8 +89,9 @@ class _AddTempatMakanPageState extends State<AddTempatMakanPage> {
                   source: ImageSource.gallery,
                   imageQuality: 50,
                 );
-                if (pickedFile != null)
+                if (pickedFile != null) {
                   setState(() => _selectedImage = File(pickedFile.path));
+                }
               },
               child: Container(
                 height: 160,

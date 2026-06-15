@@ -158,8 +158,9 @@ class TempatMakanService {
           'Authorization': 'Bearer $token',
         },
       );
-      if (response.statusCode != 200 && response.statusCode != 204)
+      if (response.statusCode != 200 && response.statusCode != 204) {
         throw Exception('Gagal menghapus tempat makan');
+      }
     } catch (e) {
       throw Exception(e.toString());
     }

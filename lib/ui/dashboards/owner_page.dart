@@ -57,13 +57,13 @@ class _OwnerHomePageState extends State<OwnerHomePage> {
                   _fetchData();
                 }
               } catch (e) {
-                if (mounted)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(e.toString()),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e.toString()),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
             child: const Text(
@@ -88,12 +88,12 @@ class _OwnerHomePageState extends State<OwnerHomePage> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await AuthService().signOut();
-              if (context.mounted)
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RoleChecker()),
-                  (route) => false,
-                );
+              if (!context.mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const RoleChecker()),
+                (route) => false,
+              );
             },
           ),
         ],
@@ -114,10 +114,12 @@ class _OwnerHomePageState extends State<OwnerHomePage> {
       body: FutureBuilder<List<TempatMakanModel>>(
         future: _myTempatMakanFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError)
+          }
+          if (snapshot.hasError) {
             return Center(child: Text("Gagal memuat: ${snapshot.error}"));
+          }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
               child: Column(

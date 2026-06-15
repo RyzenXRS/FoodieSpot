@@ -5,8 +5,9 @@ class ReviewModel {
   final int rating;
   final String comment;
   final String userName;
-  final String? imagePath;
-  final String? reply; // <-- TAMBAHAN
+  final String? userPhotoUrl;  // Foto profil reviewer (sudah full URL dari backend)
+  final String? imageUrl;      // Foto review (sudah full URL dari backend)
+  final String? reply;
 
   ReviewModel({
     required this.id,
@@ -15,8 +16,9 @@ class ReviewModel {
     required this.rating,
     required this.comment,
     required this.userName,
-    this.imagePath,
-    this.reply, // <-- TAMBAHAN
+    this.userPhotoUrl,
+    this.imageUrl,
+    this.reply,
   });
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
@@ -26,8 +28,11 @@ class ReviewModel {
       tempatMakanId: json['tempat_makan_id'] ?? 0,
       rating: json['rating'] ?? 0,
       comment: json['comment'] ?? '',
-      userName: json['user'] != null ? json['user']['name'] : 'User',
-      imagePath: json['image_path'],
+      // Ambil nama dan foto profil reviewer dari relasi 'user'
+      userName: json['user'] != null ? json['user']['name'] ?? 'User' : 'User',
+      userPhotoUrl: json['user'] != null ? json['user']['photo_url'] : null,
+      // Backend sudah return full URL di image_url
+      imageUrl: json['image_url'],
       reply: json['reply'],
     );
   }

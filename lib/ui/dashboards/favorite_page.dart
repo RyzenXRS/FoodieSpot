@@ -36,10 +36,12 @@ class _FavoritePageState extends State<FavoritePage> {
       body: FutureBuilder<List<TempatMakanModel>>(
         future: _favoritesFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError)
+          }
+          if (snapshot.hasError) {
             return Center(child: Text("Gagal memuat: ${snapshot.error}"));
+          }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
               child: Column(

@@ -45,6 +45,7 @@ class RoleChecker extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () async {
                       await AuthService().signOut();
+                      if (!context.mounted) return;
                       // Refresh halaman setelah logout
                       Navigator.pushAndRemoveUntil(
                         context,

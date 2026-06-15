@@ -76,19 +76,26 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
         );
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
+      }
     } finally {
-      if (mounted) setState(() => _isLoadingFavorite = false);
+      if (mounted) {
+        setState(() => _isLoadingFavorite = false);
+      }
     }
   }
 
+
   // --- FUNGSI MEMBACA URL GAMBAR DARI LARAVEL ---
-  String _buildImageUrl(String imagePath) {
+  // Backend sudah return full URL, tinggal pakai langsung.
+  // Jika entah bagaimana masih raw path, bangun URL-nya.
+  String _resolveImageUrl(String url) {
+    if (url.startsWith('http')) return url; // Sudah full URL
     String rootUrl = ApiConfig.baseUrl.replaceAll('/api', '');
-    return '$rootUrl/storage/$imagePath';
+    return '$rootUrl/storage/$url';
   }
 
   // --- MODAL TAMBAH REVIEW (UNTUK USER) ---
@@ -164,10 +171,11 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                         source: ImageSource.gallery,
                         imageQuality: 50,
                       );
-                      if (pickedFile != null)
+                      if (pickedFile != null) {
                         setModalState(
                           () => selectedImage = File(pickedFile.path),
                         );
+                      }
                     },
                     child: Container(
                       height: 120,
@@ -222,18 +230,17 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                 commentCtrl.text.trim(),
                                 imageFile: selectedImage,
                               );
-                              if (mounted) {
-                                Navigator.pop(ctx);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Ulasan berhasil dikirim!"),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                                _fetchData(); // Refresh ulasan dan galeri
-                              }
+                              if (!ctx.mounted || !mounted) return;
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Ulasan berhasil dikirim!"),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              _fetchData(); // Refresh ulasan dan galeri
                             } catch (e) {
-                              if (mounted)
+                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
@@ -245,9 +252,11 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                     backgroundColor: Colors.red,
                                   ),
                                 );
+                              }
                             } finally {
-                              if (mounted)
+                              if (mounted) {
                                 setModalState(() => isSubmitting = false);
+                              }
                             }
                           },
                           child: const Text(
@@ -345,18 +354,17 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                 review.id,
                                 replyCtrl.text.trim(),
                               );
-                              if (mounted) {
-                                Navigator.pop(ctx);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Berhasil membalas ulasan!"),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                                _fetchData(); // Refresh UI ulasan
-                              }
+                              if (!ctx.mounted || !mounted) return;
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Berhasil membalas ulasan!"),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              _fetchData(); // Refresh UI ulasan
                             } catch (e) {
-                              if (mounted)
+                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
@@ -368,9 +376,11 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                     backgroundColor: Colors.red,
                                   ),
                                 );
+                              }
                             } finally {
-                              if (mounted)
+                              if (mounted) {
                                 setModalState(() => isSubmitting = false);
+                              }
                             }
                           },
                           child: const Text(
@@ -428,14 +438,19 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- FOTO BAMPUL UTAMA (BANNER) ---
-            if (widget.tempatMakan.imagePath != null &&
-                widget.tempatMakan.imagePath!.isNotEmpty)
+            // --- FOTO SAMPUL UTAMA (BANNER) ---
+            if (widget.tempatMakan.imageUrl != null &&
+                widget.tempatMakan.imageUrl!.isNotEmpty)
               Image.network(
-                _buildImageUrl(widget.tempatMakan.imagePath!),
+                _resolveImageUrl(widget.tempatMakan.imageUrl!),
                 height: 220,
                 width: double.infinity,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 220,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.storefront, size: 80, color: Colors.grey),
+                ),
               )
             else
               Container(
@@ -544,10 +559,12 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                   FutureBuilder<List<PhotoModel>>(
                     future: _photosFuture,
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting)
+                      if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
-                      if (!snapshot.hasData || snapshot.data!.isEmpty)
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
                         return const Text("Belum ada foto galeri.");
+                      }
                       return SizedBox(
                         height: 100,
                         child: ListView.builder(
@@ -558,10 +575,15 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.network(
-                                _buildImageUrl(snapshot.data![index].imagePath),
+                                _resolveImageUrl(snapshot.data![index].imageUrl),
                                 width: 100,
                                 height: 100,
                                 fit: BoxFit.cover,
+                                errorBuilder: (ctx, err, _) => Container(
+                                  width: 100, height: 100,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.broken_image, color: Colors.grey),
+                                ),
                               ),
                             ),
                           ),
@@ -599,14 +621,16 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                   FutureBuilder<List<ReviewModel>>(
                     future: _reviewsFuture,
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting)
+                      if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
-                      if (!snapshot.hasData || snapshot.data!.isEmpty)
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
                         return const Center(
                           child: Text(
                             "Belum ada ulasan. Jadilah yang pertama!",
                           ),
                         );
+                      }
 
                       final listReview = snapshot.data!;
                       return ListView.builder(
@@ -623,28 +647,55 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Nama dan Bintang User
+                                  // Header Review: Foto Profil + Nama + Bintang (seperti Google Maps)
                                   Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        review.userName,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
+                                      // Foto profil reviewer
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: Colors.orange[100],
+                                        backgroundImage: review.userPhotoUrl != null
+                                            ? NetworkImage(_resolveImageUrl(review.userPhotoUrl!))
+                                            : null,
+                                        child: review.userPhotoUrl == null
+                                            ? Text(
+                                                review.userName.isNotEmpty
+                                                    ? review.userName[0].toUpperCase()
+                                                    : 'U',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.orange,
+                                                ),
+                                              )
+                                            : null,
                                       ),
-                                      Row(
-                                        children: List.generate(
-                                          5,
-                                          (starIndex) => Icon(
-                                            starIndex < review.rating
-                                                ? Icons.star
-                                                : Icons.star_border,
-                                            size: 16,
-                                            color: Colors.amber,
-                                          ),
+                                      const SizedBox(width: 10),
+                                      // Nama dan bintang
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              review.userName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                            Row(
+                                              children: List.generate(
+                                                5,
+                                                (starIndex) => Icon(
+                                                  starIndex < review.rating
+                                                      ? Icons.star
+                                                      : Icons.star_border,
+                                                  size: 14,
+                                                  color: Colors.amber,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -663,16 +714,21 @@ class _DetailTempatMakanPageState extends State<DetailTempatMakanPage> {
                                   ],
 
                                   // Foto Review User
-                                  if (review.imagePath != null &&
-                                      review.imagePath!.isNotEmpty) ...[
+                                  if (review.imageUrl != null &&
+                                      review.imageUrl!.isNotEmpty) ...[
                                     const SizedBox(height: 12),
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
                                       child: Image.network(
-                                        _buildImageUrl(review.imagePath!),
+                                        _resolveImageUrl(review.imageUrl!),
                                         height: 150,
                                         width: double.infinity,
                                         fit: BoxFit.cover,
+                                        errorBuilder: (ctx, err, _) => Container(
+                                          height: 150,
+                                          color: Colors.grey[200],
+                                          child: const Icon(Icons.broken_image),
+                                        ),
                                       ),
                                     ),
                                   ],

@@ -180,24 +180,23 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                 setModalState(() => isProcessing = true);
                                 try {
                                   await AdminService().rejectPengajuan(item.id);
-                                  if (mounted) {
-                                    Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("Pengajuan ditolak."),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                    _fetchData();
-                                  }
+                                  if (!ctx.mounted || !mounted) return;
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Pengajuan ditolak."),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  _fetchData();
                                 } catch (e) {
-                                  if (mounted)
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(e.toString()),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(e.toString()),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
                                   setModalState(() => isProcessing = false);
                                 }
                               },
@@ -223,26 +222,25 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                   await AdminService().approvePengajuan(
                                     item.id,
                                   );
-                                  if (mounted) {
-                                    Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Berhasil disetujui! User menjadi Owner.",
-                                        ),
-                                        backgroundColor: Colors.green,
+                                  if (!ctx.mounted || !mounted) return;
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Berhasil disetujui! User menjadi Owner.",
                                       ),
-                                    );
-                                    _fetchData();
-                                  }
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  _fetchData();
                                 } catch (e) {
-                                  if (mounted)
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(e.toString()),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(e.toString()),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
                                   setModalState(() => isProcessing = false);
                                 }
                               },
@@ -297,10 +295,12 @@ class _AdminHomePageState extends State<AdminHomePage> {
       body: FutureBuilder<List<PengajuanOwnerModel>>(
         future: _pengajuanFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError)
+          }
+          if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
+          }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Column(

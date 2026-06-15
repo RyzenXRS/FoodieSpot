@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
@@ -59,7 +60,7 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
 
-    print("DEBUG LOGOUT: Mencoba logout dengan token: $token");
+    debugPrint("DEBUG LOGOUT: Mencoba logout dengan token: $token");
 
     if (token != null && token.isNotEmpty) {
       try {
@@ -74,16 +75,16 @@ class AuthService {
             )
             .timeout(const Duration(seconds: 5));
 
-        print("DEBUG LOGOUT: Response Laravel Status: ${response.statusCode}");
+        debugPrint("DEBUG LOGOUT: Response Laravel Status: ${response.statusCode}");
       } catch (e) {
-        print("DEBUG LOGOUT: Error jaringan saat kontak server: $e");
+        debugPrint("DEBUG LOGOUT: Error jaringan saat kontak server: $e");
       }
     }
 
     await prefs.remove('token');
     await prefs.remove('user_data');
     await prefs.clear();
-    print("DEBUG LOGOUT: Sesi lokal berhasil dibersihkan.");
+    debugPrint("DEBUG LOGOUT: Sesi lokal berhasil dibersihkan.");
   }
 
   // --- FUNGSI UPDATE PROFIL ---
