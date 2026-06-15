@@ -67,7 +67,7 @@ class FavoriteService {
       final response = await http
           .post(
             Uri.parse(
-              '${ApiConfig.baseUrl}/tempat-makan/$tempatMakanId/favorite',
+              '${ApiConfig.baseUrl}/tempat-makan/$tempatMakanId/favorite/toggle',
             ),
             headers: {
               'Accept': 'application/json',
@@ -79,7 +79,8 @@ class FavoriteService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body)['is_favorite'];
       }
-      throw Exception('Gagal memperbarui status favorit');
+      final body = json.decode(response.body);
+      throw Exception(body['message'] ?? 'Gagal memperbarui status favorit');
     } catch (e) {
       throw Exception('Kesalahan jaringan: $e');
     }
