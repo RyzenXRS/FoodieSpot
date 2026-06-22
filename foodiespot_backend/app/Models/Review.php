@@ -21,6 +21,12 @@ class Review extends Model
     // Tambahkan image_url (full URL) ke setiap response JSON
     protected $appends = ['image_url'];
 
+    protected $casts = [
+        'rating'          => 'integer',
+        'user_id'         => 'integer',
+        'tempat_makan_id' => 'integer',
+    ];
+
     /**
      * Accessor: Konversi image_path (raw path) ke full URL.
      * Contoh output: "http://10.0.2.2:8000/storage/tempat_makan_photos/abc.jpg"

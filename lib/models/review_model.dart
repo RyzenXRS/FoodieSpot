@@ -22,11 +22,20 @@ class ReviewModel {
   });
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
+    // Safe int parse: handles both int and String from JSON
+    int _safeInt(dynamic val, [int fallback = 0]) {
+      if (val == null) return fallback;
+      if (val is int) return val;
+      if (val is num) return val.toInt();
+      if (val is String) return int.tryParse(val) ?? fallback;
+      return fallback;
+    }
+
     return ReviewModel(
-      id: json['id'] ?? 0,
-      userId: json['user_id'] ?? 0,
-      tempatMakanId: json['tempat_makan_id'] ?? 0,
-      rating: json['rating'] ?? 0,
+      id: _safeInt(json['id']),
+      userId: _safeInt(json['user_id']),
+      tempatMakanId: _safeInt(json['tempat_makan_id']),
+      rating: _safeInt(json['rating']),
       comment: json['comment'] ?? '',
       // Ambil nama dan foto profil reviewer dari relasi 'user'
       userName: json['user'] != null ? json['user']['name'] ?? 'User' : 'User',

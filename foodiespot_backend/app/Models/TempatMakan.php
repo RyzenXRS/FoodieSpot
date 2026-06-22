@@ -22,6 +22,16 @@ class TempatMakan extends Model
         'rating',
     ];
 
+    /**
+     * Cast decimal & float columns to PHP float so JSON never returns them as strings.
+     * MySQL PDO returns DECIMAL columns as strings by default — this fixes that.
+     */
+    protected $casts = [
+        'rating'    => 'float',
+        'latitude'  => 'float',
+        'longitude' => 'float',
+    ];
+
     // Tambahkan maps_url ke setiap response JSON
     protected $appends = ['maps_url'];
 

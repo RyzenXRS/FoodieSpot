@@ -50,4 +50,19 @@ class User extends Authenticatable
             'is_suspended'      => 'boolean',
         ];
     }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function photos()
+    {
+        return $this->hasMany(Photo::class);
+    }
+
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class);
+    }
 }

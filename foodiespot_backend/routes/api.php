@@ -11,6 +11,7 @@ use App\Http\Controllers\API\PengajuanOwnerController;
 use App\Http\Controllers\API\AdminController;
 use App\Http\Controllers\API\FavoriteController;
 use App\Http\Controllers\API\OwnerController;
+use App\Http\Controllers\API\NotificationController;
 
 // ============================================================
 // PUBLIC ROUTES (Tanpa Token)
@@ -35,6 +36,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile',         [AuthController::class, 'updateProfile']); // Untuk update teks saja (tanpa file)
     Route::patch('/profile',       [AuthController::class, 'updateProfile']); // Alternatif PUT
     Route::delete('/profile',      [AuthController::class, 'deleteAccount']);
+
+    // ----------------------------------------------------------
+    // NOTIFIKASI
+    // ----------------------------------------------------------
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 
     // ----------------------------------------------------------
     // TEMPAT MAKAN

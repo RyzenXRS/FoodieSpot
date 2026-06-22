@@ -177,4 +177,36 @@ class AuthService {
     }
     return null;
   }
+
+  // --- AMBIL PROFIL USER DARI SERVER ---
+  Future<UserModel> fetchUserProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Token tidak ditemukan, silakan login kembali.');
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/profile'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['status'] == 'success') {
+        Map<String, dynamic> userMap = responseData['data'];
+        await prefs.setString('user_data', json.encode(userMap));
+        return UserModel.fromJson(userMap);
+      } else {
+        throw Exception(responseData['message'] ?? 'Gagal mengambil data profil terbaru');
+      }
+    } catch (e) {
+      throw Exception('Kesalahan memuat profil: $e');
+    }
+  }
 }

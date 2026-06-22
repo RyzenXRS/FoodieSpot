@@ -24,15 +24,23 @@ class TempatMakanModel {
   });
 
   factory TempatMakanModel.fromJson(Map<String, dynamic> json) {
+    // Helper: safely parse a value that can be String "4.8" or num 4.8
+    double? _safeDouble(dynamic val) {
+      if (val == null) return null;
+      if (val is num) return val.toDouble();
+      if (val is String) return double.tryParse(val);
+      return null;
+    }
+
     return TempatMakanModel(
       id: json['id'] ?? 0,
       userId: json['user_id'] ?? 0,
       name: json['name'] ?? '',
       description: json['description'] ?? '',
       address: json['address'] ?? '',
-      rating: (json['rating'] ?? 0).toDouble(),
-      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
-      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      rating: _safeDouble(json['rating']) ?? 0.0,
+      latitude: _safeDouble(json['latitude']),
+      longitude: _safeDouble(json['longitude']),
       // Backend sudah return full URL, langsung pakai
       imageUrl: json['image_url'],
       mapsUrl: json['maps_url'],

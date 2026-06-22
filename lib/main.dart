@@ -1,8 +1,8 @@
-import 'dart:io'; // WAJIB TAMBAHKAN INI
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'ui/splash/role_checker.dart';
+import 'ui/splash/splash_screen.dart';
 
-// --- TAMBAHKAN CLASS INI UNTUK BYPASS SSL LOKAL ---
+// Bypass SSL untuk development lokal
 class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
@@ -14,10 +14,7 @@ class MyHttpOverrides extends HttpOverrides {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // --- AKTIFKAN BYPASS SSL ---
   HttpOverrides.global = MyHttpOverrides();
-
   runApp(const FoodieSpotApp());
 }
 
@@ -28,9 +25,29 @@ class FoodieSpotApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'FoodieSpot',
-      theme: ThemeData(primarySwatch: Colors.orange, useMaterial3: true),
-      home: const RoleChecker(),
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF8B5E2A),
+          primary: const Color(0xFF8B5E2A),
+          secondary: const Color(0xFFC49A5A),
+        ),
+        fontFamily: 'Roboto',
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          titleTextStyle: TextStyle(
+            color: Color(0xFF2C1A0E),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+          iconTheme: IconThemeData(color: Color(0xFF8B5E2A)),
+        ),
+      ),
+      home: const SplashScreen(),
     );
   }
 }

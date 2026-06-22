@@ -104,9 +104,10 @@ class AuthController extends Controller
     // --- LIHAT PROFIL ---
     public function profile(Request $request)
     {
+        $user = $request->user()->loadCount(['reviews', 'photos', 'favorites']);
         return response()->json([
             'status' => 'success',
-            'data'   => $request->user()
+            'data'   => $user
         ], 200);
     }
 

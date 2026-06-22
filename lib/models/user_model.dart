@@ -6,6 +6,9 @@ class UserModel {
   final String phone;
   final String photoUrl;
   final bool isSuspended;
+  final int reviewsCount;
+  final int photosCount;
+  final int favoritesCount;
 
   UserModel({
     required this.id,
@@ -15,6 +18,9 @@ class UserModel {
     this.phone = '',
     this.photoUrl = '',
     this.isSuspended = false,
+    this.reviewsCount = 0,
+    this.photosCount = 0,
+    this.favoritesCount = 0,
   });
 
   // Convert dari JSON Laravel ke Objek Dart
@@ -28,6 +34,9 @@ class UserModel {
       photoUrl: json['photo_url'] ?? '',
       // Laravel mengembalikan boolean asli karena sudah kita cast di model User.php
       isSuspended: json['is_suspended'] ?? false,
+      reviewsCount: json['reviews_count'] ?? 0,
+      photosCount: json['photos_count'] ?? 0,
+      favoritesCount: json['favorites_count'] ?? 0,
     );
   }
 }
